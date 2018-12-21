@@ -155,6 +155,7 @@ void socket::do_send(send_handler_type h)
                 h(sys::error_code(), c);
             });
 
+        _tx_buffers.clear();
         _bytes_sent = 0;
     }
 }
@@ -238,6 +239,8 @@ void socket::close()
 
 void socket::close_with_error(const sys::error_code& ec)
 {
+    // TODO: Not sure why _send_handler isn't here.
+
     if (_utp_socket && !_closed) {
         _closed = true;
         utp_close((utp_socket*) _utp_socket);

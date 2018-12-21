@@ -66,7 +66,8 @@ Handshake handshake(Socket& s, Type type, asio::yield_context yield)
         asio::async_read(s, asio::buffer(&seed, sizeof(seed)), yield);
     }
 
-    return {seed, 1024*1024*8 };
+    //return {seed, 1024*1024*8 };
+    return {seed, 5000000 };
 }
 
 template<typename Socket>
@@ -77,16 +78,16 @@ void receive(Socket& s, Type type, asio::yield_context yield)
     boost::random::uniform_int_distribution<> random_byte(0, 255);
 
     size_t to_receive = h.size;
+    size_t received = 0;
 
     vector<uint8_t> buffer(to_receive);
 
     auto start = Clock::now();
 
-    while (to_receive) {
-        cout << "receiving " << endl;
-        size_t size = asio::async_read(s, asio::buffer(buffer), yield);
+    while (received < to_receive) {
+        size_t size = s.async_read_some(asio::buffer(buffer), yield);
 
-        if (size > to_receive) {
+        if (received + size > to_receive) {
             throw std::runtime_error("Received more than was supposed to");
         }
 
@@ -96,15 +97,20 @@ void receive(Socket& s, Type type, asio::yield_context yield)
             if (buffer[i] != exp) {
                 stringstream ss;
                 ss << "Expected " << int(exp) << " but received "
-                    << int(buffer[i]) << " on byte #" << i;
+                    << int(buffer[i]) << " on byte #" << (received + i);
                 throw runtime_error(ss.str());
             }
         }
 
-        to_receive -= size;
+        received += size;
+        cout << "Received: " << received << " Bytes" << endl;
     }
 
     cout << "Took: " << seconds(Clock::now() - start) << "s" << endl;
+
+    asio::steady_timer t(s.get_io_service());
+    t.expires_from_now(chrono::seconds(15));
+    t.async_wait(yield);
 }
 
 template<typename Socket>
@@ -219,8 +225,9 @@ void client( asio::io_context& ioc
     // destroy the socket here, those data will never arrive to the
     // destination. We need some flush mechanism.
     asio::steady_timer t(ioc);
-    t.expires_from_now(chrono::minutes(1));
+    t.expires_from_now(chrono::seconds(30));
     t.async_wait(yield);
+    cout << "Done wait" << endl;
 }
 
 
