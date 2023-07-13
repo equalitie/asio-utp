@@ -1,0 +1,35 @@
+image: debian:bookworm
+
+stages:
+  - build
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
+build:
+  stage: build
+  tags:
+    - docker
+  script:
+    # Install dependencies
+    - apt update && apt install -y
+        build-essential
+        cmake
+        git
+        zlib1g-dev
+    - git clone https://gitlab.com/equalitie/ouinet-boost.git
+
+    # Build boost
+    - cmake -S ouinet-boost/ -B build/boost 
+        -Wno-error=deprecated-declarations 
+        -Wno-error=nonnull
+    - cmake --build build/boost
+
+    # Build asio-utp
+    - cmake -S ./ -B build/asio-utp
+        -DBOOST_ROOT=$CI_PROJECT_DIR/build/boost/boost/install/
+        -DASIO_UTP_WITH_TESTS=OFF
+        -DASIO_UTP_WITH_EXAMPLES=OFF
+        -DASIO_UTP_DEBUG_LOGGING=OFF
+        -DUTP_DEBUG_LOGGING=OFF
+    - cmake --build build/asio-utp
