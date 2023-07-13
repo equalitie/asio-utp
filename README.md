@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/inetic/asio-utp/tree/master.svg?style=shield)](https://circleci.com/gh/inetic/asio-utp/tree/master)
+[![pipeline status](https://gitlab.com/equalitie/asio-utp/badges/main/pipeline.svg)](https://gitlab.com/equalitie/asio-utp/-/commits/main)
 
 # Asio wrapper over the uTorrent's (MIT licensed) uTP library
 
