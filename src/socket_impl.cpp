@@ -336,8 +336,8 @@ void socket_impl::on_destroy()
     // neither _utp_socket, nor the _context get destroyed before that function
     // finishes. On the other hand we do want to schedule destruction of `this`
     // some time after that.
-    get_executor().post( [&, s = shared_from_this()] { _self = nullptr; }
-            , std::allocator<void>());
+    asio::post(get_executor(),
+               [&, s = shared_from_this()] { _self = nullptr; });
 }
 
 

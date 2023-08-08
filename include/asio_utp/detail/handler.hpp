@@ -40,7 +40,7 @@ private:
         void post(const error_code& ec, Args... args) override
         {
             if (!after) {
-                e.post(std::bind(std::move(f), ec, args...), a);
+                boost::asio::post(e, std::bind(std::move(f), ec, args...));
             } else {
                 auto ff =
                     [f = std::move(f), after = std::move(after)]
@@ -49,7 +49,7 @@ private:
                         after();
                     };
 
-                e.post(std::bind(std::move(ff), ec, args...), a);
+                boost::asio::post(e, std::bind(std::move(ff), ec, args...));
             }
         }
 
