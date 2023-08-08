@@ -13,6 +13,7 @@ class socket {
 public:
     using endpoint_type = boost::asio::ip::udp::endpoint;
     using executor_type = boost::asio::io_context::executor_type;
+    using AsioExecutor = asio_utp::AsioExecutor;
 
 public:
     socket() = default;
@@ -23,7 +24,7 @@ public:
     socket(socket&&);
     socket& operator=(socket&&);
 
-    socket(const boost::asio::executor&);
+    socket(AsioExecutor);
     socket(boost::asio::io_context&);
 
     void bind(const endpoint_type&, boost::system::error_code&);
@@ -52,7 +53,7 @@ public:
 
     void close();
 
-    boost::asio::executor get_executor()
+    AsioExecutor get_executor()
     {
         return _ex;
     }
@@ -73,7 +74,7 @@ private:
 
 private:
     friend class socket_impl;
-    boost::asio::executor _ex;
+    AsioExecutor _ex;
     std::shared_ptr<socket_impl> _socket_impl;
 };
 

@@ -4,8 +4,15 @@
 #include <boost/asio/spawn.hpp>
 
 class block {
+
+#if BOOST_VERSION >= 107400
+    using AsioExecutor = boost::asio::any_io_executor;
+#else
+    using AsioExecutor = AsioExecutor;
+#endif
+
 public:
-    block(const boost::asio::executor&);
+    block(const AsioExecutor&);
     block(const block&) = delete;
     block& operator=(const block&) = delete;
 
@@ -15,13 +22,13 @@ public:
     void wait(boost::asio::yield_context yield);
 
 private:
-    boost::asio::executor _ex;
+    AsioExecutor _ex;
     std::function<void(boost::system::error_code)> _on_notify;
     bool _released = false;
 };
 
 inline
-block::block(const boost::asio::executor& ex)
+block::block(const AsioExecutor& ex)
     : _ex(ex)
 {}
 

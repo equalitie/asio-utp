@@ -4,6 +4,7 @@
 
 using namespace std;
 using namespace asio_utp;
+using AsioExecutor = asio_utp::AsioExecutor;
 
 struct udp_multiplexer::state {
     udp_multiplexer_impl::recv_entry recv_entry;
@@ -34,7 +35,7 @@ udp_multiplexer::udp_multiplexer(boost::asio::io_context& ioc)
     : _ex(ioc.get_executor())
 {}
 
-udp_multiplexer::udp_multiplexer(const boost::asio::executor& ex)
+udp_multiplexer::udp_multiplexer(const AsioExecutor& ex)
     : _ex(ex)
 {}
 

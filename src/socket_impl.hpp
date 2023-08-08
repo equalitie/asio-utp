@@ -34,7 +34,7 @@ public:
 
     bool is_open() const { return _context && !_closed; }
 
-    boost::asio::executor get_executor()
+    AsioExecutor get_executor()
     {
         return _ex;
     }
@@ -74,7 +74,7 @@ private:
     void dispatch_op(Handler&, const char* dbg, const sys::error_code&, Args...);
 
 private:
-    boost::asio::executor _ex;
+    AsioExecutor _ex;
     service& _service;
 
     void* _utp_socket = nullptr;

@@ -16,7 +16,7 @@ struct context::ticker_type : public enable_shared_from_this<ticker_type> {
     function<void()> _on_tick;
 
 #if BOOST_VERSION >= 107000
-    ticker_type(asio::executor&& ex, function<void()> on_tick)
+    ticker_type(AsioExecutor&& ex, function<void()> on_tick)
         : _timer(move(ex))
         , _on_tick(move(on_tick))
     {
