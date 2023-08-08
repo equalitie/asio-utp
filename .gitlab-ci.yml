@@ -1,4 +1,4 @@
-image: debian:buster
+image: debian:bookworm
 
 stages:
   - build
@@ -10,7 +10,7 @@ build:
   stage: build
   variables:
      BOOST_MAJOR: "1"
-     BOOST_MINOR: "71"
+     BOOST_MINOR: "74"
      BOOST_PATCH: "0"
   tags:
     - docker
