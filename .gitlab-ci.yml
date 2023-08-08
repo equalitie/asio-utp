@@ -34,9 +34,18 @@ build:
 
     # Build asio-utp
     - cmake -S ./ -B build/asio-utp
-        -DBOOST_ROOT=$CI_PROJECT_DIR/build/boost/boost/install/
-        -DASIO_UTP_WITH_TESTS=OFF
+        -DBOOST_ROOT=$CI_PROJECT_DIR"/"$boost
+        -DASIO_UTP_WITH_TESTS=ON
         -DASIO_UTP_WITH_EXAMPLES=OFF
         -DASIO_UTP_DEBUG_LOGGING=OFF
         -DUTP_DEBUG_LOGGING=OFF
     - cmake --build build/asio-utp
+    - export LD_LIBRARY_PATH=$CI_PROJECT_DIR/$boost/stage/lib:$LD_LIBRARY_PATH
+
+    # Run the tests
+    - ./build/asio-utp/test-comm
+    - ./build/asio-utp/test-util
+
+    # Run the benchmark
+    - ./build/asio-utp/test-bench server utp 127.0.0.1:6789&
+    - ./build/asio-utp/test-bench client utp 127.0.0.1:6789
