@@ -1,27 +1,20 @@
-image: debian:bookworm
-
 stages:
   - build
 
-variables:
-  GIT_SUBMODULE_STRATEGY: recursive
-
-build:
-  stage: build
-  variables:
-     BOOST_MAJOR: "1"
-     BOOST_MINOR: "74"
-     BOOST_PATCH: "0"
+.build:
   tags:
     - docker
+  stage: build
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
   script:
     # Install dependencies
     - apt update && apt install -y
-        build-essential
-        cmake
-        git
-        zlib1g-dev
-        wget
+      build-essential
+      cmake
+      git
+      zlib1g-dev
+      wget
 
     # Build boost
     - boost="boost_"$BOOST_MAJOR"_"$BOOST_MINOR"_"$BOOST_PATCH
@@ -34,11 +27,11 @@ build:
 
     # Build asio-utp
     - cmake -S ./ -B build/asio-utp
-        -DBOOST_ROOT=$CI_PROJECT_DIR"/"$boost
-        -DASIO_UTP_WITH_TESTS=ON
-        -DASIO_UTP_WITH_EXAMPLES=OFF
-        -DASIO_UTP_DEBUG_LOGGING=OFF
-        -DUTP_DEBUG_LOGGING=OFF
+      -DBOOST_ROOT=$CI_PROJECT_DIR"/"$boost
+      -DASIO_UTP_WITH_TESTS=ON
+      -DASIO_UTP_WITH_EXAMPLES=OFF
+      -DASIO_UTP_DEBUG_LOGGING=OFF
+      -DUTP_DEBUG_LOGGING=OFF
     - cmake --build build/asio-utp
     - export LD_LIBRARY_PATH=$CI_PROJECT_DIR/$boost/stage/lib:$LD_LIBRARY_PATH
 
@@ -49,3 +42,19 @@ build:
     # Run the benchmark
     - ./build/asio-utp/test-bench server utp 127.0.0.1:6789&
     - ./build/asio-utp/test-bench client utp 127.0.0.1:6789
+
+boost-1.71:
+  extends: ".build"
+  image: debian:buster
+  variables:
+     BOOST_MAJOR: "1"
+     BOOST_MINOR: "71"
+     BOOST_PATCH: "0"
+
+boost-1.74:
+  extends: ".build"
+  image: debian:bookworm
+  variables:
+    BOOST_MAJOR: "1"
+    BOOST_MINOR: "74"
+    BOOST_PATCH: "0"
