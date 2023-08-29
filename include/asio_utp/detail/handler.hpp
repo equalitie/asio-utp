@@ -1,6 +1,13 @@
 #pragma once
+#include <boost/asio/dispatch.hpp>
 
 namespace asio_utp {
+
+#if BOOST_VERSION >= 107400
+    using AsioExecutor = boost::asio::any_io_executor;
+#else
+    using AsioExecutor = boost::asio::executor;
+#endif
 
 template<typename... Args>
 class handler {
@@ -33,7 +40,7 @@ private:
         void post(const error_code& ec, Args... args) override
         {
             if (!after) {
-                e.post(std::bind(std::move(f), ec, args...), a);
+                boost::asio::post(e, std::bind(std::move(f), ec, args...));
             } else {
                 auto ff =
                     [f = std::move(f), after = std::move(after)]
@@ -42,14 +49,14 @@ private:
                         after();
                     };
 
-                e.post(std::bind(std::move(ff), ec, args...), a);
+                boost::asio::post(e, std::bind(std::move(ff), ec, args...));
             }
         }
 
         void dispatch(const error_code& ec, Args... args) override
         {
             if (!after) {
-                e.dispatch(std::bind(std::move(f), ec, args...), a);
+                boost::asio::dispatch(e, std::bind(std::move(f), ec, args...));
             } else {
                 auto ff =
                     [f = std::move(f), after = std::move(after)]
@@ -58,7 +65,7 @@ private:
                         after();
                     };
 
-                e.dispatch(std::bind(std::move(ff), ec, args...), a);
+                boost::asio::dispatch(e, std::bind(std::move(ff), ec, args...));
             }
         }
 

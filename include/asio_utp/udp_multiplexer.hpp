@@ -10,6 +10,8 @@ class udp_multiplexer_impl;
 class socket_impl;
 
 class udp_multiplexer {
+using AsioExecutor = asio_utp::AsioExecutor;
+
 private:
     struct state;
 
@@ -34,7 +36,7 @@ public:
     udp_multiplexer& operator=(udp_multiplexer&&) = default;
 
     udp_multiplexer(boost::asio::io_context&);
-    udp_multiplexer(const boost::asio::executor&);
+    udp_multiplexer(const AsioExecutor&);
 
     void bind(const endpoint_type& local_endpoint, boost::system::error_code&);
     void bind(const udp_multiplexer&, boost::system::error_code&);
@@ -53,7 +55,7 @@ public:
 
     on_send_to_connection on_send_to(std::function<on_send_to_handler> handler);
 
-    boost::asio::executor get_executor()
+    AsioExecutor get_executor()
     {
         return _ex;
     }
@@ -77,7 +79,7 @@ private:
     std::shared_ptr<udp_multiplexer_impl> impl() const;
 
 private:
-    boost::asio::executor _ex;
+    AsioExecutor _ex;
     std::shared_ptr<state> _state;
 };
 

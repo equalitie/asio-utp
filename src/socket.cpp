@@ -4,13 +4,14 @@
 
 using namespace std;
 using namespace asio_utp;
+using AsioExecutor = asio_utp::AsioExecutor;
 
 socket::socket(boost::asio::io_context& ioc)
     : _ex(ioc.get_executor())
 {}
 
-socket::socket(const boost::asio::executor& ex)
-    : _ex(ex)
+socket::socket(AsioExecutor  ex)
+    : _ex(std::move(ex))
 {}
 
 void socket::bind(const endpoint_type& ep, sys::error_code& ec)

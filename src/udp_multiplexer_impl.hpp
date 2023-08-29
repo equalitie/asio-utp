@@ -62,8 +62,15 @@ public:
         return _udp_socket.local_endpoint();
     }
 
+
+#if BOOST_VERSION >= 107400
+        using AsioExecutor = boost::asio::any_io_executor;
+#else
+        using AsioExecutor = boost::asio::executor;
+#endif
+
 #if BOOST_VERSION >= 107000
-    boost::asio::executor get_executor()
+    AsioExecutor get_executor()
 #else
     boost::asio::io_context::executor_type get_executor()
 #endif
