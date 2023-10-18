@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <boost/asio.hpp>
 #include "namespaces.hpp"
 
