@@ -80,3 +80,11 @@ boost-1.79:
     BOOST_MAJOR: "1"
     BOOST_MINOR: "79"
     BOOST_PATCH: "0"
+
+boost-1.85:
+  extends: ".build"
+  image: debian:bookworm
+  variables:
+    BOOST_MAJOR: "1"
+    BOOST_MINOR: "85"
+    BOOST_PATCH: "0"
