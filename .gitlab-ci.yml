@@ -80,6 +80,48 @@ boost-1.79:
     BOOST_MAJOR: "1"
     BOOST_MINOR: "79"
     BOOST_PATCH: "0"
+  when: manual
+  allow_failure: true
+
+boost-1.80:
+  extends: ".build"
+  image: debian:bookworm
+  variables:
+    BOOST_MAJOR: "1"
+    BOOST_MINOR: "80"
+    BOOST_PATCH: "0"
+
+boost-1.81:
+  extends: ".build"
+  image: debian:bookworm
+  variables:
+    BOOST_MAJOR: "1"
+    BOOST_MINOR: "81"
+    BOOST_PATCH: "0"
+
+boost-1.82:
+  extends: ".build"
+  image: debian:bookworm
+  variables:
+    BOOST_MAJOR: "1"
+    BOOST_MINOR: "82"
+    BOOST_PATCH: "0"
+
+boost-1.83:
+  extends: ".build"
+  image: debian:bookworm
+  variables:
+    BOOST_MAJOR: "1"
+    BOOST_MINOR: "83"
+    BOOST_PATCH: "0"
+
+boost-1.84:
+  extends: ".build"
+  image: debian:bookworm
+  variables:
+    BOOST_MAJOR: "1"
+    BOOST_MINOR: "84"
+    BOOST_PATCH: "0"
 
 boost-1.85:
   extends: ".build"
