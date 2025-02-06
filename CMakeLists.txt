@@ -14,10 +14,7 @@ project(asio_utp)
 set(CMAKE_CXX_STANDARD 14)
 
 find_package(Threads)
-find_package(Boost ${BOOST_VERSION} REQUIRED COMPONENTS
-    coroutine
-    system
-)
+find_package(Boost ${BOOST_VERSION} REQUIRED COMPONENTS system)
 
 #---------------------------------------------------------------------
 
@@ -45,9 +42,6 @@ target_compile_definitions(asio_utp
         # This is a static library, so don't include asio. Users need to link
         # libboost_asio either statically or as a shared library.
         -DBOOST_ASIO_SEPARATE_COMPILATION
-        # For some reason we need to define both of these
-        -DBOOST_COROUTINES_NO_DEPRECATION_WARNING
-        -DBOOST_COROUTINE_NO_DEPRECATION_WARNING
 )
 target_link_libraries(asio_utp
     PUBLIC Boost::boost
