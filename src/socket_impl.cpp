@@ -68,7 +68,6 @@ void socket_impl::on_receive(const unsigned char* buf, size_t size)
 
     using asio::const_buffer;
     using asio::mutable_buffer;
-    using asio::buffer_cast;
     using asio::buffer_size;
     using asio::buffer_copy;
 
@@ -91,7 +90,7 @@ void socket_impl::on_receive(const unsigned char* buf, size_t size)
         // If the recv buffer is smaller than what we've received,
         // we need to store it for later.
         if (buffer_size(src) != 0) {
-            const unsigned char* begin = buffer_cast<const unsigned char*>(src);
+            const unsigned char* begin = static_cast<const unsigned char*>(src.data());
             const unsigned char* end   = begin + buffer_size(src);
             _rx_buffer_queue.push_back({begin, end});
             break;
@@ -166,7 +165,7 @@ void socket_impl::do_write(handler<size_t> h)
         while (size_t s = asio::buffer_size(b)) {
             // TODO: Use utp_writev
             auto w = utp_write( (utp_socket*) _utp_socket
-                              , (void*) asio::buffer_cast<const void*>(b)
+                              , const_cast<void*>(b.data())
                               , s);
 
             assert(w >= 0);

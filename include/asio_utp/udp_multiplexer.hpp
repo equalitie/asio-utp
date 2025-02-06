@@ -98,14 +98,14 @@ auto udp_multiplexer::async_receive_from( const MutableBufferSequence& bufs
                  , std::back_inserter(*rx_bufs));
     }
 
-    boost::asio::async_completion
-        < CompletionToken
-        , void(boost::system::error_code, size_t)
-        > c(token);
+    auto init = [&](auto completion_handler) {
+        do_receive(ep, {get_executor(), std::move(completion_handler)});
+    };
 
-    do_receive(ep, {get_executor(), std::move(c.completion_handler)});
-
-    return c.result.get();
+    return boost::asio::async_initiate<
+        CompletionToken,
+        void(boost::system::error_code, size_t)
+      >(init, token);
 }
 
 template< typename ConstBufferSequence
@@ -123,14 +123,14 @@ auto udp_multiplexer::async_send_to( const ConstBufferSequence& bufs
                  , std::back_inserter(*tx_bufs));
     }
 
-    boost::asio::async_completion
-        < CompletionToken
-        , void(boost::system::error_code, size_t)
-        > c(token);
+    auto init = [&](auto completion_handler) {
+        do_send(destination, {get_executor(), std::move(completion_handler)});
+    };
 
-    do_send(destination, {get_executor(), std::move(c.completion_handler)});
-
-    return c.result.get();
+    return boost::asio::async_initiate<
+        CompletionToken,
+        void(boost::system::error_code, size_t)
+      >(init, token);
 }
 
 } // asio_utp

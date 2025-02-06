@@ -86,24 +86,28 @@ template<typename CompletionToken>
 inline
 void socket::async_connect(const endpoint_type& ep, CompletionToken&& token)
 {
-    boost::asio::async_completion
-        <CompletionToken, void(boost::system::error_code)> c(token);
+    auto init = [&](auto completion_handler) {
+        do_connect(ep, {get_executor(), std::move(completion_handler)});
+    };
 
-    do_connect(ep, {get_executor(), std::move(c.completion_handler)});
-
-    return c.result.get();
+    return boost::asio::async_initiate<
+        CompletionToken,
+        void(boost::system::error_code)
+      >(init, token);
 }
 
 template<typename CompletionToken>
 inline
 void socket::async_accept(CompletionToken&& token)
 {
-    boost::asio::async_completion
-        <CompletionToken, void(boost::system::error_code)> c(token);
+    auto init = [&](auto completion_handler) {
+        do_accept({get_executor(), std::move(completion_handler)});
+    };
 
-    do_accept({get_executor(), std::move(c.completion_handler)});
-
-    return c.result.get();
+    return boost::asio::async_initiate<
+        CompletionToken,
+        void(boost::system::error_code)
+    >(init, token);
 }
 
 template< typename ConstBufferSequence
@@ -120,14 +124,14 @@ auto socket::async_write_some( const ConstBufferSequence& bufs
                  , std::back_inserter(*txb));
     }
 
-    boost::asio::async_completion
-        < CompletionToken
-        , void(boost::system::error_code, size_t)
-        > c(token);
+    auto init = [&](auto completion_handler) {
+        do_write({get_executor(), std::move(completion_handler)});
+    };
 
-    do_write({get_executor(), std::move(c.completion_handler)});
-
-    return c.result.get();
+    return boost::asio::async_initiate<
+        CompletionToken,
+        void(boost::system::error_code, size_t)
+    >(init, token);
 }
 
 template< typename MutableBufferSequence
