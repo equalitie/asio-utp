@@ -18,7 +18,7 @@ namespace utp = asio_utp;
 
 BOOST_AUTO_TEST_SUITE(comm_tests)
 
-static asio::mutable_buffers_1 buffer(std::string& s) {
+static asio::mutable_buffer buffer(std::string& s) {
     return asio::buffer(const_cast<char*>(s.data()), s.size());
 }
 
