@@ -400,7 +400,7 @@ BOOST_AUTO_TEST_CASE(comm_abort_accept)
         sys::error_code ec;
 
         asio::spawn(ioc, [&socket, &ioc] (asio::yield_context yield) {
-            ioc.post(yield); // So that closing happens _after_ the accept
+            asio::post(yield); // So that closing happens _after_ the accept
             socket.close();
         });
 
@@ -433,7 +433,7 @@ BOOST_AUTO_TEST_CASE(comm_abort_connect)
         sys::error_code ec;
 
         asio::spawn(ioc, [&client_s, &ioc] (asio::yield_context yield) {
-            ioc.post(yield); // So that closing happens _after_ the accept
+            asio::post(yield); // So that closing happens _after_ the accept
             client_s.close();
         });
 
@@ -481,7 +481,7 @@ BOOST_AUTO_TEST_CASE(comm_abort_recv)
         BOOST_REQUIRE(!ec);
 
         asio::spawn(ioc, [&server_s, &ioc](asio::yield_context yield) {
-            ioc.post(yield);
+            asio::post(yield);
             server_s.close();
         });
 
@@ -499,7 +499,7 @@ BOOST_AUTO_TEST_CASE(comm_abort_recv)
         BOOST_REQUIRE(!ec);
 
         asio::spawn(ioc, [&client_s, &ioc](asio::yield_context yield) {
-            ioc.post(yield);
+            asio::post(yield);
             client_s.close();
         });
 
