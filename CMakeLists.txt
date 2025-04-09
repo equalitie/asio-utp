@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.5)
-set(BOOST_VERSION 1.70)
+if (NOT BOOST_VERSION)
+    set(BOOST_VERSION 1.87.0)
+endif ()
 include(ExternalProject)
 
 option(ASIO_UTP_WITH_TESTS    "Build tests" ON)
@@ -14,7 +16,11 @@ project(asio_utp)
 set(CMAKE_CXX_STANDARD 14)
 
 find_package(Threads)
-find_package(Boost ${BOOST_VERSION} REQUIRED COMPONENTS system)
+if (BOOST_VERSION GREATER_EQUAL 1.80.0)
+    find_package(Boost ${BOOST_VERSION} REQUIRED COMPONENTS system)
+else ()
+    find_package(Boost ${BOOST_VERSION} REQUIRED COMPONENTS system coroutine)
+endif ()
 
 #---------------------------------------------------------------------
 
