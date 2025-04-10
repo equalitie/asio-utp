@@ -13,6 +13,7 @@
 #include <boost/random/uniform_int.hpp>
 #include <boost/utility/string_view.hpp>
 #include <asio_utp.hpp>
+#include <task.h>
 
 using namespace std;
 namespace utp = asio_utp;
@@ -249,7 +250,7 @@ int main(int argc, const char** argv)
     try {
         asio::io_context ioc(1);
 
-        asio::spawn(ioc, [&] (asio::yield_context yield) {
+        task::spawn_detached(ioc, [&] (asio::yield_context yield) {
                 if (proto == "tcp") {
                     if (type == Type::client) {
                         client<tcp>(ioc, endpoint, yield);
