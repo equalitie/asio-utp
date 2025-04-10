@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.5)
-set(BOOST_VERSION 1.70)
+if (NOT BOOST_VERSION)
+    set(BOOST_VERSION 1.87.0)
+endif ()
 include(ExternalProject)
 
 option(ASIO_UTP_WITH_TESTS    "Build tests" ON)
@@ -14,10 +16,11 @@ project(asio_utp)
 set(CMAKE_CXX_STANDARD 14)
 
 find_package(Threads)
-find_package(Boost ${BOOST_VERSION} REQUIRED COMPONENTS
-    coroutine
-    system
-)
+if (BOOST_VERSION GREATER_EQUAL 1.80.0)
+    find_package(Boost ${BOOST_VERSION} REQUIRED COMPONENTS system context)
+else ()
+    find_package(Boost ${BOOST_VERSION} REQUIRED COMPONENTS system coroutine context)
+endif ()
 
 #---------------------------------------------------------------------
 
@@ -45,9 +48,6 @@ target_compile_definitions(asio_utp
         # This is a static library, so don't include asio. Users need to link
         # libboost_asio either statically or as a shared library.
         -DBOOST_ASIO_SEPARATE_COMPILATION
-        # For some reason we need to define both of these
-        -DBOOST_COROUTINES_NO_DEPRECATION_WARNING
-        -DBOOST_COROUTINE_NO_DEPRECATION_WARNING
 )
 target_link_libraries(asio_utp
     PUBLIC Boost::boost
@@ -98,7 +98,7 @@ if(ASIO_UTP_WITH_TESTS)
 
     add_executable(test-comm "test/comm.cpp")
     target_include_directories(test-comm PUBLIC "./src")
-    target_link_libraries(test-comm asio_utp asio_utp_static_asio)
+    target_link_libraries(test-comm asio_utp asio_utp_static_asio Boost::context)
 
     add_executable(test-bench "test/bench.cpp")
     target_include_directories(test-bench PUBLIC "./src")

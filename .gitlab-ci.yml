@@ -5,6 +5,7 @@ stages:
   tags:
     - docker
   stage: build
+  image: debian:bookworm
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
   script:
@@ -18,16 +19,20 @@ stages:
 
     # Build boost
     - boost="boost_"$BOOST_MAJOR"_"$BOOST_MINOR"_"$BOOST_PATCH
-    - wget "https://boostorg.jfrog.io/artifactory/main/release/"$BOOST_MAJOR"."$BOOST_MINOR"."$BOOST_PATCH"/source/"$boost".tar.bz2"
+    - BOOST_VERSION=$BOOST_MAJOR"."$BOOST_MINOR"."$BOOST_PATCH
+    - wget --quiet "https://archives.boost.io/release/"$BOOST_VERSION"/source/"$boost".tar.bz2"
     - tar -xjf $boost".tar.bz2"
     - cd $boost
     - ./bootstrap.sh
-    - ./b2 -j3 -d+0 --link=static --with-system --with-test --with-coroutine
+    - b2_options="--link=static --with-system --with-test --with-context"
+    - if [[ $BOOST_MINOR -lt 80 ]]; then b2_options=$b2_options" --with-coroutine"; fi
+    - ./b2 -j3 -d+0 $b2_options
     - cd ..
 
     # Build asio-utp
     - cmake -S ./ -B build/asio-utp
       -DBOOST_ROOT=$CI_PROJECT_DIR"/"$boost
+      -DBOOST_VERSION=$BOOST_VERSION
       -DASIO_UTP_WITH_TESTS=ON
       -DASIO_UTP_WITH_EXAMPLES=OFF
       -DASIO_UTP_DEBUG_LOGGING=OFF
@@ -43,40 +48,16 @@ stages:
     - ./build/asio-utp/test-bench server utp 127.0.0.1:6789&
     - ./build/asio-utp/test-bench client utp 127.0.0.1:6789
 
-boost-1.71:
-  extends: ".build"
-  image: debian:buster
-  variables:
-     BOOST_MAJOR: "1"
-     BOOST_MINOR: "71"
-     BOOST_PATCH: "0"
-  when: manual
-  allow_failure: true
-
-boost-1.74:
-  extends: ".build"
-  image: debian:bookworm
-  variables:
-    BOOST_MAJOR: "1"
-    BOOST_MINOR: "74"
-    BOOST_PATCH: "0"
-  when: manual
-  allow_failure: true
-
-boost-1.77:
-  extends: ".build"
-  image: debian:bookworm
-  variables:
-    BOOST_MAJOR: "1"
-    BOOST_MINOR: "77"
-    BOOST_PATCH: "0"
-  when: manual
-  allow_failure: true
-
 boost-1.79:
   extends: ".build"
-  image: debian:bookworm
   variables:
     BOOST_MAJOR: "1"
     BOOST_MINOR: "79"
+    BOOST_PATCH: "0"
+
+boost-1.87:
+  extends: ".build"
+  variables:
+    BOOST_MAJOR: "1"
+    BOOST_MINOR: "87"
     BOOST_PATCH: "0"
