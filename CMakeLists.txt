@@ -17,9 +17,9 @@ set(CMAKE_CXX_STANDARD 14)
 
 find_package(Threads)
 if (BOOST_VERSION GREATER_EQUAL 1.80.0)
-    find_package(Boost ${BOOST_VERSION} REQUIRED COMPONENTS system)
+    find_package(Boost ${BOOST_VERSION} REQUIRED COMPONENTS system context)
 else ()
-    find_package(Boost ${BOOST_VERSION} REQUIRED COMPONENTS system coroutine)
+    find_package(Boost ${BOOST_VERSION} REQUIRED COMPONENTS system coroutine context)
 endif ()
 
 #---------------------------------------------------------------------
@@ -98,7 +98,7 @@ if(ASIO_UTP_WITH_TESTS)
 
     add_executable(test-comm "test/comm.cpp")
     target_include_directories(test-comm PUBLIC "./src")
-    target_link_libraries(test-comm asio_utp asio_utp_static_asio)
+    target_link_libraries(test-comm asio_utp asio_utp_static_asio Boost::context)
 
     add_executable(test-bench "test/bench.cpp")
     target_include_directories(test-bench PUBLIC "./src")

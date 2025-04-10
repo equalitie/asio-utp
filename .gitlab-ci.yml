@@ -24,7 +24,7 @@ stages:
     - tar -xjf $boost".tar.bz2"
     - cd $boost
     - ./bootstrap.sh
-    - b2_options="--link=static --with-system --with-test"
+    - b2_options="--link=static --with-system --with-test --with-context"
     - if [[ $BOOST_MINOR -lt 80 ]]; then b2_options=$b2_options" --with-coroutine"; fi
     - ./b2 -j3 -d+0 $b2_options
     - cd ..
