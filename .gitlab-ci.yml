@@ -61,3 +61,10 @@ boost-1.87:
     BOOST_MAJOR: "1"
     BOOST_MINOR: "87"
     BOOST_PATCH: "0"
+
+boost-1.88:
+  extends: ".build"
+  variables:
+    BOOST_MAJOR: "1"
+    BOOST_MINOR: "88"
+    BOOST_PATCH: "0"
