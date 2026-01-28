@@ -8,6 +8,9 @@
 #include <asio_utp.hpp>
 #include <namespaces.hpp>
 #include <boost/asio/spawn.hpp>
+#include <boost/asio/read.hpp>
+#include <boost/asio/write.hpp>
+#include <boost/optional.hpp>
 #include <task.h>
 
 namespace sys = boost::system;
@@ -16,8 +19,6 @@ namespace ip = asio::ip;
 using udp = ip::udp;
 using namespace std;
 namespace utp = asio_utp;
-
-BOOST_AUTO_TEST_SUITE(comm_tests)
 
 static asio::mutable_buffer buffer(std::string& s) {
     return asio::buffer(const_cast<char*>(s.data()), s.size());
@@ -36,6 +37,77 @@ BOOST_AUTO_TEST_CASE(comm_no_block)
     // When there are no async actions waiting to be completed, this shouldn't
     // block.
     ioc.run();
+}
+
+// Test whether receiving while the other side disconnects removes all pending
+// jobs from io_context in a timely manner.
+BOOST_AUTO_TEST_CASE(send_destroy__recv_recv_disconnect)
+{
+    using namespace std::chrono;
+
+    asio::io_context ioc;
+
+    utp::socket server_s(ioc);
+    utp::socket client_s(ioc);
+
+    {
+        sys::error_code ec1, ec2;
+
+        server_s.bind({ip::address_v4::loopback(), 0}, ec1);
+        client_s.bind({ip::address_v4::loopback(), 0}, ec2);
+
+        BOOST_REQUIRE(!ec1);
+        BOOST_REQUIRE(!ec2);
+    }
+
+    auto server_ep = server_s.local_endpoint();
+
+    string tx_msg = "test";
+
+    uint8_t job_count = 2;
+    boost::optional<steady_clock::time_point> jobs_end_time;
+
+    // Server
+    task::spawn_detached(ioc, [&, s = std::move(server_s)](asio::yield_context yield) mutable {
+        sys::error_code ec;
+
+        s.async_accept(yield[ec]);
+        BOOST_REQUIRE(!ec);
+
+        string rx_msg(tx_msg.size(), '\0');
+        async_read(s, buffer(rx_msg), yield[ec]);
+        BOOST_REQUIRE(!ec);
+        BOOST_REQUIRE_EQUAL(rx_msg, tx_msg);
+
+        async_read(s, buffer(rx_msg), yield[ec]);
+
+        BOOST_REQUIRE_EQUAL(ec, asio::error::connection_reset);
+
+        if (--job_count == 0) {
+            jobs_end_time = steady_clock::now();
+        }
+    });
+
+    // Client
+    task::spawn_detached(ioc, [&, s = std::move(client_s)](asio::yield_context yield) mutable {
+        sys::error_code ec;
+
+        s.async_connect(server_ep, yield[ec]);
+        BOOST_REQUIRE(!ec);
+
+        async_write(s, asio::buffer(tx_msg), yield[ec]);
+        BOOST_REQUIRE(!ec);
+
+        if (--job_count == 0) {
+            jobs_end_time = steady_clock::now();
+        }
+    });
+
+    ioc.run();
+
+    BOOST_REQUIRE(jobs_end_time);
+    auto elapsed_ms = duration_cast<milliseconds>(steady_clock::now() - *jobs_end_time).count();
+    BOOST_REQUIRE_LT(elapsed_ms, 1000);
 }
 
 BOOST_AUTO_TEST_CASE(comm_server_reads)
@@ -626,5 +698,3 @@ BOOST_AUTO_TEST_CASE(comm_client_eof)
 
     ioc.run();
 }
-
-BOOST_AUTO_TEST_SUITE_END()

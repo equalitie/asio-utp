@@ -375,7 +375,11 @@ void socket_impl::close_with_error(const sys::error_code& ec)
 
     auto s = (utp_socket*) _utp_socket;
 
-    if (s) {
+    // NOTE: If we `_got_eof` then we don't call `utp_close` because that would
+    // make the uTP context start sending FIN packets to the other side, but if
+    // the other side already closed the socket, then we would wait for FIN ACK
+    // unnecessarily until timeout (which is quite long).
+    if (s && !_got_eof) {
         // Note: Calling utp_close may trigger a call to this function again.
         utp_close(s);
         _self = shared_from_this();
