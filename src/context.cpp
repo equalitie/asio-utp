@@ -110,7 +110,7 @@ uint64 context::callback_on_state_change(utp_callback_arguments* a)
 {
     auto socket = (socket_impl*) utp_get_userdata(a->socket);
 
-    auto* ctx = socket ? socket->_context.get() : nullptr;
+    auto* ctx = (context*) utp_context_get_userdata(a->context);
 
     if (ctx->_debug) {
         log( ctx, " context::callback_on_state_change"
