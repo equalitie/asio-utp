@@ -170,9 +170,11 @@ void udp_multiplexer_impl::on_recv_entry_unlinked()
         // such that it doesn't block io_context.run or have another
         // socket (or perhaps the same one?) send this socket a
         // message to release from async_receive_from.
-        sys::error_code ec;
-        _udp_socket.cancel(ec);
-        assert(!ec);
+        if (_udp_socket.is_open()) {
+            sys::error_code ec;
+            _udp_socket.cancel(ec);
+            assert(!ec);
+        }
     }
 }
 
