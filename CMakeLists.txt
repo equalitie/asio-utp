@@ -21,7 +21,9 @@ project(asio_utp)
 set(CMAKE_CXX_STANDARD 14)
 
 find_package(Threads)
-if (BOOST_VERSION GREATER_EQUAL 1.80.0)
+if (BOOST_VERSION GREATER_EQUAL 1.89.0)
+    find_package(Boost ${BOOST_VERSION} REQUIRED COMPONENTS context)
+elseif (BOOST_VERSION GREATER_EQUAL 1.80.0)
     find_package(Boost ${BOOST_VERSION} REQUIRED COMPONENTS system context)
 else ()
     find_package(Boost ${BOOST_VERSION} REQUIRED COMPONENTS system coroutine context)
@@ -40,9 +42,15 @@ file(GLOB libutp_sources
 
 file(GLOB asio_utp_sources "./src/*.cpp")
 
+if (WIN32 OR MINGW)
+    set(ASIO_UTP_LIBUTP_PLATFORM WIN32)
+else()
+    set(ASIO_UTP_LIBUTP_PLATFORM POSIX)
+endif()
+
 add_library(asio_utp STATIC ${asio_utp_sources} ${libutp_sources})
 set_source_files_properties(${libutp_sources} PROPERTIES COMPILE_FLAGS
-    "-Wno-sign-compare -DPOSIX -fno-exceptions -fno-rtti -O3"
+    "-Wno-sign-compare -D${ASIO_UTP_LIBUTP_PLATFORM} -fno-exceptions -fno-rtti -O3"
 )
 target_include_directories(asio_utp
     PUBLIC "include"

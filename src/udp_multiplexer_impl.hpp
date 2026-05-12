@@ -7,6 +7,7 @@
 #include <asio_utp/log.hpp>
 #include <asio_utp/detail/signal.hpp>
 #include <iostream>
+#include <sstream>
 
 namespace asio_utp {
 
