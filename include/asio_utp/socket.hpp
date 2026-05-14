@@ -36,10 +36,10 @@ public:
     void bind(const udp_multiplexer&, boost::system::error_code&);
 
     template<typename CompletionToken>
-    void async_connect(const endpoint_type&, CompletionToken&&);
+    auto async_connect(const endpoint_type&, CompletionToken&&);
 
     template<typename CompletionToken>
-    void async_accept(CompletionToken&&);
+    auto async_accept(CompletionToken&&);
 
     template< typename ConstBufferSequence
             , typename CompletionToken>
@@ -84,7 +84,7 @@ private:
 
 template<typename CompletionToken>
 inline
-void socket::async_connect(const endpoint_type& ep, CompletionToken&& token)
+auto socket::async_connect(const endpoint_type& ep, CompletionToken&& token)
 {
     auto init = [&](auto completion_handler) {
         do_connect(ep, {get_executor(), std::move(completion_handler)});
@@ -98,7 +98,7 @@ void socket::async_connect(const endpoint_type& ep, CompletionToken&& token)
 
 template<typename CompletionToken>
 inline
-void socket::async_accept(CompletionToken&& token)
+auto socket::async_accept(CompletionToken&& token)
 {
     auto init = [&](auto completion_handler) {
         do_accept({get_executor(), std::move(completion_handler)});
