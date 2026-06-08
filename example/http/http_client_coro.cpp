@@ -129,7 +129,7 @@ int main(int argc, char** argv)
     // Launch the asynchronous operation
     net::spawn(ioc, std::bind(
         &do_session,
-        udp::endpoint{net::ip::address::from_string(ip), port},
+        udp::endpoint{net::ip::make_address(ip), port},
         std::string(host),
         std::string(target),
         version,

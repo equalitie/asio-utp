@@ -33,7 +33,7 @@ ip::udp::endpoint parse_endpoint(string s)
         throw runtime_error("Failed to parse endpoint");
     }
 
-    auto addr = ip::address::from_string(s.substr(0, pos));
+    auto addr = ip::make_address(s.substr(0, pos));
     auto port = s.substr(pos + 1);
 
     if (port.empty()) port = "0";
@@ -74,12 +74,12 @@ void full_duplex_forward(utp::socket s, asio::yield_context yield)
     asio::spawn(ex, [&] (asio::yield_context yield) {
         defer on_exit{[&] { close_everything(); b1.release(); }};
         half_duplex_forward(s, output, yield);
-    });
+    }, asio::detached);
 
     asio::spawn(ex, [&] (asio::yield_context yield) {
         defer on_exit{[&] { close_everything(); b2.release(); }};
         half_duplex_forward(input, s, yield);
-    });
+    }, asio::detached);
 
     b1.wait(yield);
     b2.wait(yield);
@@ -151,12 +151,12 @@ int main(int argc, const char** argv)
     if (argv[1] == string("c")) {
         asio::spawn(ioc, [&] (asio::yield_context yield) {
             client(ioc, argc, argv, yield);
-        });
+        }, asio::detached);
     }
     else if (argv[1] == string("s")) {
         asio::spawn(ioc, [&] (asio::yield_context yield) {
             server(ioc, argc, argv, yield);
-        });
+        }, asio::detached);
     }
     else {
         usage(argv[0]);

@@ -1,3 +1,4 @@
+#include <boost/asio/detached.hpp>
 #define BOOST_TEST_MODULE comm
 #include <boost/test/included/unit_test.hpp>
 
@@ -349,7 +350,7 @@ BOOST_AUTO_TEST_CASE(comm_same_endpoint_multiplex)
         BOOST_REQUIRE(!ec);
         server1.close();
         server2.close();
-    });
+    }, asio::detached);
 
     asio::spawn(ioc, [&](asio::yield_context yield) {
         sys::error_code ec;
@@ -372,7 +373,7 @@ BOOST_AUTO_TEST_CASE(comm_same_endpoint_multiplex)
 
         client2.async_connect(server1.local_endpoint(), yield[ec]);
         BOOST_REQUIRE(!ec);
-    });
+    }, asio::detached);
 
     ioc.run();
 }
@@ -428,7 +429,7 @@ BOOST_AUTO_TEST_CASE(comm_send_large_data)
         server_s.async_read_some(buffer(rx_msg), yield[ec]);
         BOOST_REQUIRE_EQUAL(ec, asio::error::connection_reset);
         //server_s.close();
-    });
+    }, asio::detached);
 
     asio::spawn(ioc, [&](asio::yield_context yield) {
         sys::error_code ec;
@@ -451,7 +452,7 @@ BOOST_AUTO_TEST_CASE(comm_send_large_data)
         }
 
         client_s.close();
-    });
+    }, asio::detached);
 
     ioc.run();
 }
@@ -475,11 +476,11 @@ BOOST_AUTO_TEST_CASE(comm_abort_accept)
         asio::spawn(ioc, [&socket, &ioc] (asio::yield_context yield) {
             asio::post(yield); // So that closing happens _after_ the accept
             socket.close();
-        });
+        }, asio::detached);
 
         socket.async_accept(yield[ec]);
         BOOST_REQUIRE_EQUAL(ec, asio::error::operation_aborted);
-    });
+    }, asio::detached);
 
     ioc.run();
 }
@@ -508,13 +509,13 @@ BOOST_AUTO_TEST_CASE(comm_abort_connect)
         asio::spawn(ioc, [&client_s, &ioc] (asio::yield_context yield) {
             asio::post(yield); // So that closing happens _after_ the accept
             client_s.close();
-        });
+        }, asio::detached);
 
         client_s.async_connect(server_s.local_endpoint(), yield[ec]);
         BOOST_REQUIRE_EQUAL(ec, asio::error::operation_aborted);
 
         server_s.close();
-    });
+    }, asio::detached);
 
     ioc.run();
 }
@@ -635,7 +636,7 @@ BOOST_AUTO_TEST_CASE(comm_server_eof)
         string rx_msg(256, '\0');
         server_s.async_read_some(buffer(rx_msg), yield[ec]);
         BOOST_REQUIRE_EQUAL(ec, asio::error::connection_reset);
-    });
+    }, asio::detached);
 
     asio::spawn(ioc, [&](asio::yield_context yield) {
         sys::error_code ec;
@@ -644,7 +645,7 @@ BOOST_AUTO_TEST_CASE(comm_server_eof)
         BOOST_REQUIRE(!ec);
 
         client_s.close();
-    });
+    }, asio::detached);
 
     ioc.run();
 }
@@ -678,7 +679,7 @@ BOOST_AUTO_TEST_CASE(comm_client_eof)
         server_s.async_read_some(buffer(msg), yield[ec]);
 
         server_s.close();
-    });
+    }, asio::detached);
 
     asio::spawn(ioc, [&](asio::yield_context yield) {
         sys::error_code ec;
@@ -694,7 +695,7 @@ BOOST_AUTO_TEST_CASE(comm_client_eof)
 
         client_s.async_read_some(buffer(msg), yield[ec]);
         BOOST_REQUIRE_EQUAL(ec, asio::error::connection_reset);
-    });
+    }, asio::detached);
 
     ioc.run();
 }

@@ -22,7 +22,6 @@ namespace rnd = boost::random;
 using asio::ip::tcp;
 using asio::ip::udp;
 using Clock = std::chrono::steady_clock;
-using string_view = boost::string_view;
 
 enum class Type { client, server };
 
@@ -42,7 +41,7 @@ typename Proto::endpoint parse_endpoint(const string_view s)
         throw runtime_error(ss.str());
     }
 
-    auto addr = asio::ip::make_address(s.substr(0, pos).to_string());
+    auto addr = asio::ip::make_address(s.substr(0, pos));
     uint16_t port = std::atoi(s.substr(pos+1).data());
     return {addr, port};
 }
@@ -161,10 +160,10 @@ template<> struct Async<tcp> {
     {
         auto local_ep = parse_endpoint<tcp>(local_ep_s);
         tcp::acceptor acceptor(ioc, local_ep);
-    
+
         tcp::socket socket(ioc);
         acceptor.async_accept(socket, yield);
-    
+
         return socket;
     }
 };
@@ -176,13 +175,13 @@ template<> struct Async<utp::protocol> {
                       , asio::yield_context yield)
     {
         auto local_ep = parse_endpoint<utp::protocol>(local_ep_s);
-    
+
         boost::system::error_code ec;
         utp::socket socket(ioc);
         socket.bind(local_ep, ec);
         assert(!ec);
         socket.async_accept(yield);
-    
+
         return socket;
     }
 };

@@ -18,7 +18,7 @@ option(UTP_DEBUG_LOGGING      "Enable debug logging from libutp" OFF)
 
 project(asio_utp)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 23)
 
 find_package(Threads)
 if (BOOST_VERSION GREATER_EQUAL 1.89.0)

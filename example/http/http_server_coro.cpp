@@ -13,6 +13,7 @@
 //
 //------------------------------------------------------------------------------
 
+#include <boost/asio/detached.hpp>
 #include <boost/range.hpp>
 #include <boost/asio/error.hpp>
 #include <boost/beast/core.hpp>
@@ -80,8 +81,8 @@ path_cat(
     beast::string_view path)
 {
     if(base.empty())
-        return path.to_string();
-    std::string result = base.to_string();
+        return path;
+    std::string result = base;
 #if BOOST_MSVC
     char constexpr path_separator = '\\';
     if(result.back() == path_separator)
@@ -120,7 +121,7 @@ handle_request(
         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         res.set(http::field::content_type, "text/html");
         res.keep_alive(req.keep_alive());
-        res.body() = why.to_string();
+        res.body() = why;
         res.prepare_payload();
         return res;
     };
@@ -133,7 +134,7 @@ handle_request(
         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         res.set(http::field::content_type, "text/html");
         res.keep_alive(req.keep_alive());
-        res.body() = "The resource '" + target.to_string() + "' was not found.";
+        res.body() = "The resource '" + static_cast<std::string>(target) + "' was not found.";
         res.prepare_payload();
         return res;
     };
@@ -146,7 +147,7 @@ handle_request(
         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         res.set(http::field::content_type, "text/html");
         res.keep_alive(req.keep_alive());
-        res.body() = "An error occurred: '" + what.to_string() + "'";
+        res.body() = "An error occurred: '" + static_cast<std::string>(what) + "'";
         res.prepare_payload();
         return res;
     };
@@ -327,7 +328,8 @@ do_listen(
                     &do_session,
                     std::move(socket),
                     doc_root,
-                    std::placeholders::_1));
+                    std::placeholders::_1),
+                net::detached);
     }
 }
 
@@ -357,7 +359,8 @@ int main(int argc, char* argv[])
             std::ref(ioc),
             udp::endpoint{address, port},
             doc_root,
-            std::placeholders::_1));
+            std::placeholders::_1),
+        net::detached);
 
     // Run the I/O service on the requested number of threads
     std::vector<std::thread> v;

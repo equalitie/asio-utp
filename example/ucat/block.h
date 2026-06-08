@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/asio/async_result.hpp>
+#include <boost/asio/executor_work_guard.hpp>
 #include <memory>
 #include <boost/asio/spawn.hpp>
 
@@ -23,7 +25,7 @@ public:
 
 private:
     AsioExecutor _ex;
-    std::function<void(boost::system::error_code)> _on_notify;
+    std::move_only_function<void(boost::system::error_code)> _on_notify;
     bool _released = false;
 };
 
@@ -37,7 +39,7 @@ block::~block()
 {
     if (!_on_notify) return;
 
-    boost::asio::post(_ex, [h = std::move(_on_notify)] {
+    boost::asio::post(_ex, [h = std::move(_on_notify)] mutable {
             h(boost::asio::error::operation_aborted);
         });
 }
@@ -49,7 +51,7 @@ void block::release()
 
     if (!_on_notify) return;
 
-    boost::asio::post(_ex, [h = std::move(_on_notify)] {
+    boost::asio::post(_ex, [h = std::move(_on_notify)] mutable {
             h(boost::system::error_code());
         });
 }
@@ -62,13 +64,17 @@ void block::wait(boost::asio::yield_context yield)
 
     if (_released) return;
 
-    asio::async_completion<decltype(yield), void(system::error_code)> c(yield);
-
-    _on_notify = [ h = std::move(c.completion_handler)
-                 , w = asio::make_work_guard(_ex)
-                 ] (const system::error_code& ec) mutable {
-                     h(ec);
-                 };
-
-    return c.result.get();
+    return asio::async_initiate<asio::yield_context, void(system::error_code)>(
+        [this] (auto handler) {
+            _on_notify =
+                [
+                    w = asio::make_work_guard(_ex),
+                    h = std::move(handler)
+                ]
+                (boost::system::error_code ec) mutable {
+                    h(ec);
+                };
+        },
+        yield
+    );
 }
