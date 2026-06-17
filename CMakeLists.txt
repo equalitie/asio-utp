@@ -48,7 +48,7 @@ else()
     set(ASIO_UTP_LIBUTP_PLATFORM POSIX)
 endif()
 
-add_library(asio_utp STATIC ${asio_utp_sources} ${libutp_sources})
+add_library(asio_utp SHARED ${asio_utp_sources} ${libutp_sources})
 set_source_files_properties(${libutp_sources} PROPERTIES COMPILE_FLAGS
     "-Wno-sign-compare -D${ASIO_UTP_LIBUTP_PLATFORM} -fno-exceptions -fno-rtti -O3"
 )
