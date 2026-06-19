@@ -15,19 +15,11 @@ struct context::ticker_type : public enable_shared_from_this<ticker_type> {
     asio::steady_timer _timer;
     function<void()> _on_tick;
 
-#if BOOST_VERSION >= 107000
-    ticker_type(AsioExecutor&& ex, function<void()> on_tick)
+    ticker_type(AsioExecutor ex, function<void()> on_tick)
         : _timer(move(ex))
         , _on_tick(move(on_tick))
     {
     }
-#else
-    ticker_type(asio::io_context::executor_type&& ex, function<void()> on_tick)
-        : _timer(ex.context())
-        , _on_tick(move(on_tick))
-    {
-    }
-#endif
 
     void start() {
         if (_running) return;

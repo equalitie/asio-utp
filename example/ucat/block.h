@@ -6,12 +6,7 @@
 #include <boost/asio/spawn.hpp>
 
 class block {
-
-#if BOOST_VERSION >= 107400
     using AsioExecutor = boost::asio::any_io_executor;
-#else
-    using AsioExecutor = boost::asio::executor;
-#endif
 
 public:
     block(const AsioExecutor&);
