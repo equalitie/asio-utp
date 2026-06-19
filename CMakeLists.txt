@@ -105,15 +105,15 @@ endif() # ASIO_UTP_WITH_EXAMPLES
 
 #---------------------------------------------------------------------
 if(ASIO_UTP_WITH_TESTS)
-    add_executable(test-util "test/util.cpp")
-    target_include_directories(test-util PUBLIC "./src")
-    target_link_libraries(test-util asio_utp_static_asio)
+    add_executable(asio_utp_test_util "test/util.cpp")
+    target_include_directories(asio_utp_test_util PUBLIC "./src")
+    target_link_libraries(asio_utp_test_util asio_utp_static_asio)
 
-    add_executable(test-comm "test/comm.cpp")
-    target_include_directories(test-comm PUBLIC "./src")
-    target_link_libraries(test-comm asio_utp asio_utp_static_asio Boost::context)
+    add_executable(asio_utp_test_comm "test/comm.cpp")
+    target_include_directories(asio_utp_test_comm PUBLIC "./src")
+    target_link_libraries(asio_utp_test_comm asio_utp asio_utp_static_asio Boost::context)
 
-    add_executable(test-bench "test/bench.cpp")
-    target_include_directories(test-bench PUBLIC "./src")
-    target_link_libraries(test-bench asio_utp asio_utp_static_asio)
+    add_executable(asio_utp_test_bench "test/bench.cpp")
+    target_include_directories(asio_utp_test_bench PUBLIC "./src")
+    target_link_libraries(asio_utp_test_bench asio_utp asio_utp_static_asio)
 endif() # ASIO_UTP_WITH_TESTS
