@@ -14,10 +14,12 @@ struct context::ticker_type : public enable_shared_from_this<ticker_type> {
     bool _outstanding = false;
     asio::steady_timer _timer;
     function<void()> _on_tick;
+    MultiplexerId _id;
 
     ticker_type(AsioExecutor ex, function<void()> on_tick)
         : _timer(move(ex))
         , _on_tick(move(on_tick))
+        , _id(m->id())
     {
     }
 
@@ -83,8 +85,14 @@ uint64 context::callback_sendto(utp_callback_arguments* a)
     return 0;
 }
 
-uint64 context::callback_on_error(utp_callback_arguments*)
+uint64 context::callback_on_error(utp_callback_arguments* a)
 {
+    auto* ctx = (context*) utp_context_get_userdata(a->context);
+    if (ctx->_debug) {
+        auto socket = (socket_impl*) utp_get_userdata(a->socket);
+        log( ctx->id(), " context::callback_on_error"
+           , " socket:" ,socket);
+    }
     return 0;
 }
 
@@ -105,7 +113,7 @@ uint64 context::callback_on_state_change(utp_callback_arguments* a)
     auto* ctx = (context*) utp_context_get_userdata(a->context);
 
     if (ctx->_debug) {
-        log( ctx, " context::callback_on_state_change"
+        log( ctx->id(), " context::callback_on_state_change"
            , " socket:" ,socket
            , " new_state:" ,libutp_state_name(a->state));
     }
@@ -174,9 +182,10 @@ context::context(shared_ptr<udp_multiplexer_impl> m)
     : _multiplexer(std::move(m))
     , _local_endpoint(_multiplexer->local_endpoint())
     , _utp_ctx(utp_init(2 /* version */))
+    , _id(m->id())
 {
     if (_debug) {
-        log(this, " context::context()");
+        log(_id, " context::context()");
     }
 
     // TODO: Throw?
@@ -193,7 +202,7 @@ context::context(shared_ptr<udp_multiplexer_impl> m)
             assert(_utp_ctx);
             if (!_utp_ctx) return;
             if (_debug) {
-                log(this, " context on_tick");
+                log(_id, " context on_tick");
             }
             utp_check_timeouts(_utp_ctx);
         });
@@ -231,7 +240,7 @@ void context::unregister_socket(socket_impl& s) {
 void context::start_receiving()
 {
     if (_debug) {
-        log(this, " context start_receiving");
+        log(_id, " context start_receiving");
     }
 
     assert(_recv_handle.handler);
@@ -244,14 +253,14 @@ void context::start_receiving()
 void context::start()
 {
     if (_debug) {
-        log(this, " context start");
+        log(_id, " context start");
     }
 }
 
 void context::stop()
 {
     if (_debug) {
-        log(this, " context stop");
+        log(_id, " context stop");
     }
 
     _ticker->stop();
@@ -263,7 +272,7 @@ void context::on_read( const sys::error_code& read_ec
                      , size_t size)
 {
     if (_debug) {
-        log(this, " context on_read data.size:", size
+        log(_id, " context on_read data.size:", size
                 , " from:", ep);
     }
 
@@ -302,7 +311,7 @@ context::executor_type context::get_executor()
 context::~context()
 {
     if (_debug) {
-        log(this, " ~context");
+        log(_id, " ~context");
     }
 
     utp_destroy(_utp_ctx);
@@ -314,7 +323,7 @@ context::~context()
 void context::increment_outstanding_ops(const char* dbg)
 {
     if (_debug) {
-        log(this, " context::increment_outstanding_ops "
+        log(_id, " context::increment_outstanding_ops "
            , _outstanding_op_count, " -> ", (_outstanding_op_count + 1)
            , " ", dbg, " (completed:", _completed_op_count, ")");
     }
@@ -327,7 +336,7 @@ void context::increment_outstanding_ops(const char* dbg)
 void context::decrement_outstanding_ops(const char* dbg)
 {
     if (_debug) {
-        log(this, " context::decrement_outstanding_ops "
+        log(_id, " context::decrement_outstanding_ops "
            , _outstanding_op_count, " -> ", (_outstanding_op_count - 1)
            , " ", dbg, " (completed:", _completed_op_count, ")");
     }
@@ -340,7 +349,7 @@ void context::decrement_outstanding_ops(const char* dbg)
 void context::increment_completed_ops(const char* dbg)
 {
     if (_debug) {
-        log(this, " context::increment_completed_ops "
+        log(_id, " context::increment_completed_ops "
            , _completed_op_count, " -> ", (_completed_op_count + 1)
            , " ", dbg, " (outstanding:", _outstanding_op_count, ")");
     }
@@ -351,7 +360,7 @@ void context::increment_completed_ops(const char* dbg)
 void context::decrement_completed_ops(const char* dbg)
 {
     if (_debug) {
-        log(this, " context::decrement_completed_ops "
+        log(_id, " context::decrement_completed_ops "
            , _completed_op_count, " -> ", (_completed_op_count - 1)
            , " ", dbg, " (outstanding:", _outstanding_op_count, ")");
     }

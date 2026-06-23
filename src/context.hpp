@@ -8,6 +8,7 @@
 #include "socket_impl.hpp"
 #include "udp_multiplexer_impl.hpp"
 #include "intrusive_list.hpp"
+#include "id.hpp"
 
 #include <utp.h>
 #include <asio_utp/socket.hpp>
@@ -39,6 +40,10 @@ public:
     void decrement_outstanding_ops(const char* dbg);
     void increment_completed_ops(const char* dbg);
     void decrement_completed_ops(const char* dbg);
+
+    MultiplexerId id() const {
+        return _id;
+    }
 
 private:
     static void erase_context(endpoint_type);
@@ -87,6 +92,7 @@ private:
     size_t _outstanding_op_count = 0;
     // Number of operations waiting on the execution queue.
     size_t _completed_op_count = 0;
+    MultiplexerId _id;
 
 #if ASIO_UTP_DEBUG_LOGGING
     bool _debug = true;

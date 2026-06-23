@@ -15,12 +15,10 @@ socket_impl::socket_impl(socket* owner)
     : _ex(owner->get_executor())
     , _service(asio::use_service<service>(_ex.context()))
     , _owner(owner)
+    , _id(_context.id().generate_socket_id())
 {
-    static decltype(_debug_id) next_debug_id = 1;
-    _debug_id = next_debug_id++;
-
     if (_debug) {
-        log(this, " debug_id:", _debug_id, " socket_impl::socket_impl()");
+        log(_id, " socket_impl::socket_impl()");
     }
 }
 
@@ -61,7 +59,7 @@ void socket_impl::on_connect()
 void socket_impl::on_receive(const unsigned char* buf, size_t size)
 {
     if (_debug) {
-        log( this, " debug_id:", _debug_id, " socket_impl::on_receive "
+        log( _id, " socket_impl::on_receive "
            , "_recv_handler:", bool(_recv_handler), " "
            , "size:", size);
     }
@@ -108,7 +106,7 @@ void socket_impl::on_receive(const unsigned char* buf, size_t size)
 void socket_impl::on_accept(void* usocket)
 {
     if (_debug) {
-        log(this, " socket_impl::on_accept utp_socket:", usocket);
+        log(_id, " socket_impl::on_accept utp_socket:", usocket);
     }
 
     assert(!_utp_socket);
@@ -148,7 +146,7 @@ void socket_impl::dispatch_op(Handler& h, const char* dbg, const sys::error_code
 void socket_impl::do_write(handler<size_t> h)
 {
     if (_debug) {
-        log(this, " socket_impl::do_write");
+        log(_id, " socket_impl::do_write");
     }
 
     assert(!_send_handler);
@@ -193,7 +191,7 @@ void socket_impl::do_write(handler<size_t> h)
 void socket_impl::on_writable()
 {
     if (_debug) {
-        log(this, " socket_impl::on_writable");
+        log(_id, " socket_impl::on_writable");
     }
 
     if (!_send_handler) return;
@@ -203,7 +201,7 @@ void socket_impl::on_writable()
 void socket_impl::do_read(handler<size_t> h)
 {
     if (_debug) {
-        log(this, " debug_id:", _debug_id, " socket_impl::do_read ",
+        log(_id, " socket_impl::do_read ",
             " buffer_size(_rx_buffers):", asio::buffer_size(_rx_buffers),
             " _rx_buffer_queue.size():", _rx_buffer_queue.size(),
             " buffer_size(_rx_buffer_queue):", asio::buffer_size(_rx_buffer_queue));
@@ -256,7 +254,7 @@ void socket_impl::do_read(handler<size_t> h)
 void socket_impl::do_accept(handler<> h)
 {
     if (_debug) {
-        log(this, " socket_impl::do_accept");
+        log(_id, " socket_impl::do_accept");
     }
 
     // TODO: Which error code to call `h` with?
@@ -287,7 +285,7 @@ asio::ip::udp::endpoint socket_impl::remote_endpoint() const
 void socket_impl::close()
 {
     if (_debug) {
-        log(this, " socket_impl::close()");
+        log(_id, " socket_impl::close()");
     }
 
     close_with_error(asio::error::operation_aborted);
@@ -297,7 +295,7 @@ void socket_impl::close()
 void socket_impl::on_eof()
 {
     if (_debug) {
-        log(this, " debug_id:", _debug_id, " socket_impl::on_eof",
+        log(_id, " socket_impl::on_eof",
                 " _send_handler:", bool(_send_handler),
                 " _recv_handler:", bool(_recv_handler));
     }
@@ -316,9 +314,8 @@ void socket_impl::on_eof()
 void socket_impl::on_destroy()
 {
     if (_debug) {
-        log( this, " debug_id:", _debug_id, " socket_impl::on_destroy"
-           , " refcount:", asio_utp::weak_from_this(this).use_count()
-           , " _self:", _self.get());
+        log( _id, " socket_impl::on_destroy"
+           , " refcount:", asio_utp::weak_from_this(this).use_count());
     }
 
     assert(_utp_socket);
@@ -343,8 +340,8 @@ void socket_impl::on_destroy()
 void socket_impl::close_with_error(const sys::error_code& ec)
 {
     if (_debug) {
-        log(this, " debug_id:", _debug_id, " socket_impl::close_with_error "
-            "_utp_socket:", _utp_socket, " _self:", _self.get(), " _closed:", _closed);
+        log(_id, " socket_impl::close_with_error "
+            "_utp_socket:", _utp_socket, " _closed:", _closed);
     }
 
     if (_closed) {
@@ -395,7 +392,7 @@ void socket_impl::close_with_error(const sys::error_code& ec)
 socket_impl::~socket_impl()
 {
     if (_debug) {
-        log(this, " debug_id:", _debug_id, " socket_impl::~socket_impl()");
+        log(_id, " socket_impl::~socket_impl()");
     }
 
     if (_utp_socket) {
@@ -413,7 +410,7 @@ socket_impl::~socket_impl()
 void socket_impl::do_connect(const endpoint_type& ep, handler<> h)
 {
     if (_debug) {
-        log(this, " debug_id:", _debug_id, " socket_impl::do_connect ep:", ep);
+        log(_id, " socket_impl::do_connect ep:", ep);
     }
 
     assert(!_utp_socket);

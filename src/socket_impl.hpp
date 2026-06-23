@@ -3,6 +3,7 @@
 #include <boost/intrusive/list.hpp>
 #include <asio_utp/detail/handler.hpp>
 #include "intrusive_list.hpp"
+#include "id.hpp"
 
 namespace asio_utp {
     
@@ -114,13 +115,13 @@ private:
     // until libutp destroys `this->_utp_socket` (there is some IO that is done
     // in the mean time, like sending FIN packets and such).
     std::shared_ptr<socket_impl> _self;
+    SocketId _id;
 
 #if ASIO_UTP_DEBUG_LOGGING
     bool _debug = true;
 #else
     bool _debug = false;
 #endif
-    uint32_t _debug_id = 0;
 };
 
 } // namespace

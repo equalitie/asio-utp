@@ -4,6 +4,7 @@
 #include "namespaces.hpp"
 #include "weak_from_this.hpp"
 #include "intrusive_list.hpp"
+#include "id.hpp"
 #include <asio_utp/log.hpp>
 #include <asio_utp/detail/signal.hpp>
 #include <iostream>
@@ -76,6 +77,10 @@ public:
 
     ~udp_multiplexer_impl();
 
+    MultiplexerId id() const {
+        return _id;
+    }
+
 private:
     void start_receiving();
     void flush_handlers(const sys::error_code& ec, size_t size);
@@ -98,6 +103,7 @@ private:
     Signal<on_send_to_handler> _send_to_signal;
     std::shared_ptr<State> _state;
     bool _is_receiving = false;
+    MultiplexerId _id;
     bool _debug = false;
 };
 
@@ -177,11 +183,19 @@ inline void udp_multiplexer_impl::start_receiving()
 
     auto wself = asio_utp::weak_from_this(this);
 
+    if (_debug) {
+        log(_id, " udp_multiplexer_impl::start_receiving");
+    }
+
     _udp_socket.async_receive_from
         ( asio::buffer(_state->rx_buffer)
         , _state->rx_endpoint
         , [&, wself, s = _state] (const sys::error_code& ec, size_t size)
           {
+              if (_debug) {
+                  log(_id, " udp_multiplexer_impl::start_receiving on receive ", ec.message());
+              }
+
               if (auto self = wself.lock()) {
                   assert(_is_receiving);
 
@@ -205,10 +219,10 @@ inline
 void udp_multiplexer_impl::flush_handlers(const sys::error_code& ec, size_t size)
 {
     if (_debug) {
-        log(this, " udp_multiplexer::flush_handlers "
+        log(_id, " udp_multiplexer::flush_handlers "
             "ec:", ec.message(), " size:", size, " from:", _state->rx_endpoint);
         if (!ec) {
-            log(this, "    ", to_hex((uint8_t*)_state->rx_buffer.data(), size));
+            log(_id, "    ", to_hex((uint8_t*)_state->rx_buffer.data(), size));
         }
     }
 
@@ -231,9 +245,9 @@ std::size_t udp_multiplexer_impl::send_to( const std::vector<asio::const_buffer>
                                          , sys::error_code& ec)
 {
     if (_debug) {
-        log(this, " udp_multiplexer::send_to");
+        log(_id, " udp_multiplexer::send_to ", destination);
         for (auto b : buffers) {
-            log(this, "    ", to_hex((uint8_t*)b.data(), b.size()));
+            log(_id, "    ", to_hex((uint8_t*)b.data(), b.size()));
         }
     }
 
@@ -280,7 +294,7 @@ size_t udp_multiplexer_impl::available(sys::error_code& ec) const
 inline
 udp_multiplexer_impl::~udp_multiplexer_impl() {
     if (_debug) {
-        log(this, " ~udp_multiplexer_impl");
+        log(_id, " ~udp_multiplexer_impl");
     }
 
     auto& s = asio::use_service<service>(_udp_socket.get_executor().context());
