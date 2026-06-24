@@ -32,8 +32,6 @@ public:
 
     void increment_outstanding_ops(const char* dbg);
     void decrement_outstanding_ops(const char* dbg);
-    void increment_completed_ops(const char* dbg);
-    void decrement_completed_ops(const char* dbg);
 
     void register_socket(std::shared_ptr<socket_impl>);
 
@@ -78,11 +76,10 @@ private:
     struct ticker_type;
     std::shared_ptr<ticker_type> _ticker;
 
-    // Number of operation started but their handler have
-    // not yet been put onto the execution queue.
+    // Number of operations requested by socket_impl which require reading from
+    // UDP socket. These are basically all read, write, connect, accept and
+    // close as all of them require some sort of confirmation from the peer.
     size_t _outstanding_op_count = 0;
-    // Number of operations waiting on the execution queue.
-    size_t _completed_op_count = 0;
     MultiplexerId _id;
 
 #if ASIO_UTP_DEBUG_LOGGING

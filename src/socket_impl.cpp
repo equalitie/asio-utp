@@ -96,22 +96,18 @@ void socket_impl::setup_op(Handler& target, Handler&& h, const char* dbg)
 {
     _context->increment_outstanding_ops(dbg);
     target = move(h);
-    target.exec_after([ctx = _context, dbg] { ctx->decrement_completed_ops(dbg); });
+    target.exec_after([ctx = _context, dbg] { ctx->decrement_outstanding_ops(dbg); });
 }
 
 template<class Handler, class... Args>
 void socket_impl::post_op(Handler& h, const char* dbg, const sys::error_code& ec, Args... args)
 {
-    _context->increment_completed_ops(dbg);
-    _context->decrement_outstanding_ops(dbg);
     h.post(ec, args...);
 }
 
 template<class Handler, class... Args>
 void socket_impl::dispatch_op(Handler& h, const char* dbg, const sys::error_code& ec, Args... args)
 {
-    _context->increment_completed_ops(dbg);
-    _context->decrement_outstanding_ops(dbg);
     h.dispatch(ec, args...);
 }
 

@@ -330,7 +330,7 @@ void context::increment_outstanding_ops(const char* dbg)
     if (_debug) {
         log(_id, " context::increment_outstanding_ops "
            , _outstanding_op_count, " -> ", (_outstanding_op_count + 1)
-           , " ", dbg, " (completed:", _completed_op_count, ")");
+           , " ", dbg);
     }
 
     if (_outstanding_op_count++ == 0) {
@@ -343,34 +343,10 @@ void context::decrement_outstanding_ops(const char* dbg)
     if (_debug) {
         log(_id, " context::decrement_outstanding_ops "
            , _outstanding_op_count, " -> ", (_outstanding_op_count - 1)
-           , " ", dbg, " (completed:", _completed_op_count, ")");
+           , " ", dbg);
     }
 
-    if (--_outstanding_op_count == 0 && _completed_op_count == 0) {
-        stop_receiving();
-    }
-}
-
-void context::increment_completed_ops(const char* dbg)
-{
-    if (_debug) {
-        log(_id, " context::increment_completed_ops "
-           , _completed_op_count, " -> ", (_completed_op_count + 1)
-           , " ", dbg, " (outstanding:", _outstanding_op_count, ")");
-    }
-
-    _completed_op_count++;
-}
-
-void context::decrement_completed_ops(const char* dbg)
-{
-    if (_debug) {
-        log(_id, " context::decrement_completed_ops "
-           , _completed_op_count, " -> ", (_completed_op_count - 1)
-           , " ", dbg, " (outstanding:", _outstanding_op_count, ")");
-    }
-
-    if (--_completed_op_count == 0 && _outstanding_op_count == 0) {
+    if (--_outstanding_op_count == 0) {
         stop_receiving();
     }
 }
