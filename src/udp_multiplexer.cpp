@@ -1,6 +1,7 @@
 #include <asio_utp/udp_multiplexer.hpp>
 #include "udp_multiplexer_impl.hpp"
 #include "service.hpp"
+#include "context.hpp"
 
 using namespace std;
 using namespace asio_utp;
@@ -63,8 +64,7 @@ void udp_multiplexer::bind( const endpoint_type& local_ep
         = std::bind(&state::handle_read, _state, _1, _2, _3, _4);
 }
 
-void udp_multiplexer::bind( const udp_multiplexer& other
-                          , sys::error_code& ec)
+void udp_multiplexer::bind( const udp_multiplexer& other)
 {
     using namespace std::placeholders;
 

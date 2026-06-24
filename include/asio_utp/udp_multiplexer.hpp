@@ -39,7 +39,7 @@ public:
     udp_multiplexer(const AsioExecutor&);
 
     void bind(const endpoint_type& local_endpoint, boost::system::error_code&);
-    void bind(const udp_multiplexer&, boost::system::error_code&);
+    void bind(const udp_multiplexer&);
 
     template< typename MutableBufferSequence
             , typename CompletionToken>
@@ -75,7 +75,7 @@ private:
     std::vector<boost::asio::mutable_buffer>* rx_buffers();
     std::vector<boost::asio::const_buffer>*   tx_buffers();
 
-    friend class socket_impl;
+    friend class socket;
     std::shared_ptr<udp_multiplexer_impl> impl() const;
 
 private:

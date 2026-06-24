@@ -6,22 +6,18 @@
 
 namespace asio_utp {
 
+class service;
 class socket_impl;
 class udp_multiplexer;
+class udp_multiplexer_impl;
 
 class socket {
 public:
     using endpoint_type = boost::asio::ip::udp::endpoint;
-#if BOOST_VERSION >= 107400
     using executor_type = boost::asio::any_io_executor;
-#else
-    using executor_type = boost::asio::io_context::executor_type;
-#endif
     using AsioExecutor = asio_utp::AsioExecutor;
 
 public:
-    socket() = default;
-
     socket(const socket&) = delete;
     socket& operator=(const socket&) = delete;
 
@@ -79,7 +75,12 @@ private:
 private:
     friend class socket_impl;
     AsioExecutor _ex;
+    service& _service;
+    // `_socket_impl` is shared with the `context`.
     std::shared_ptr<socket_impl> _socket_impl;
+    // `_multiplexer` may be shared with multiple other `socket`s or with
+    // `udp_multiplexer`s.
+    std::shared_ptr<udp_multiplexer_impl> _multiplexer;
 };
 
 template<typename CompletionToken>

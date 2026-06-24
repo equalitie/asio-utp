@@ -21,13 +21,6 @@ public:
         : asio::execution_context::service(ctx)
     {}
 
-    template<class Executor>
-    std::shared_ptr<::asio_utp::context>
-    maybe_create_context(Executor&, const endpoint_type&, sys::error_code& ec);
-
-    std::shared_ptr<::asio_utp::context>
-    maybe_create_context(std::shared_ptr<udp_multiplexer_impl>);
-
     void erase_context(endpoint_type ep);
 
     template<class Executor>
@@ -41,7 +34,6 @@ public:
     ~service();
 
 private:
-    std::map<endpoint_type, std::weak_ptr<::asio_utp::context>> _contexts;
     std::map<endpoint_type, std::weak_ptr<udp_multiplexer_impl>> _multiplexers;
 
     bool _debug = false;
@@ -56,33 +48,11 @@ namespace asio_utp {
 
 template<class Executor>
 inline
-std::shared_ptr<::asio_utp::context>
-service::maybe_create_context(Executor& ex, const endpoint_type& ep, sys::error_code& ec)
-{
-    auto i = _contexts.find(ep);
-
-    if (i != _contexts.end()) return i->second.lock();
-
-    auto m  = maybe_create_udp_multiplexer(ex, ep, ec);
-
-    if (ec) return nullptr;
-
-    return maybe_create_context(std::move(m));
-}
-
-inline
-void service::erase_context(endpoint_type ep)
-{
-    _contexts.erase(ep);
-}
-
-template<class Executor>
-inline
 std::shared_ptr<udp_multiplexer_impl>
 service::maybe_create_udp_multiplexer(Executor& ex, const endpoint_type& ep, sys::error_code& ec)
 {
     if (_debug) {
-        std::cerr << "maybe_create_udp_multiplexer " << ep << " " << _multiplexers.size() << "\n";
+        log("maybe_create_udp_multiplexer ", ep, " ", _multiplexers.size());
     }
 
     auto i = _multiplexers.find(ep);
@@ -95,7 +65,7 @@ service::maybe_create_udp_multiplexer(Executor& ex, const endpoint_type& ep, sys
 
     if (ec) return nullptr;
 
-    auto m = std::make_shared<udp_multiplexer_impl>(std::move(socket));
+    auto m = udp_multiplexer_impl::create(std::move(socket));
     _multiplexers[m->local_endpoint()] = m;
 
     return m;
@@ -105,7 +75,7 @@ inline
 void service::erase_multiplexer(endpoint_type ep)
 {
     if (_debug) {
-        std::cerr << "erase_multiplexer " << ep << " " << _multiplexers.size() << "\n";
+        log("erase_multiplexer ", ep, " ", _multiplexers.size());
     }
 
     assert(_multiplexers.count(ep));
@@ -115,8 +85,7 @@ void service::erase_multiplexer(endpoint_type ep)
 inline service::~service()
 {
     if (_debug) {
-        std::cerr << "~service " << _contexts.size() << " " << _multiplexers.size() << "\n";
-        assert(_contexts.empty());
+        log("~service");
         assert(_multiplexers.empty());
     }
 }

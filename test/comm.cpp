@@ -323,6 +323,44 @@ BOOST_AUTO_TEST_CASE(socket_local_random_bind)
 }
 
 
+BOOST_AUTO_TEST_CASE(comm_quick_stop)
+{
+    asio::io_context ioc;
+
+    utp::socket server(ioc);
+
+    sys::error_code ec;
+
+    server.bind({ip::address_v4::loopback(), 0}, ec);
+    BOOST_REQUIRE(!ec);
+
+    asio::spawn(ioc, [&](asio::yield_context yield) {
+        sys::error_code ec;
+
+        server.async_accept(yield[ec]);
+        BOOST_REQUIRE(!ec);
+
+        server.close();
+    }, asio::detached);
+
+    asio::spawn(ioc, [&](asio::yield_context yield) {
+        sys::error_code ec;
+
+        utp::socket client(ioc);
+
+        client.bind({ip::address_v4::loopback(), 0}, ec);
+        BOOST_REQUIRE(!ec);
+
+        client.async_connect(server.local_endpoint(), yield[ec]);
+        BOOST_REQUIRE(!ec);
+
+        client.close();
+    }, asio::detached);
+
+    ioc.run();
+}
+
+
 BOOST_AUTO_TEST_CASE(comm_same_endpoint_multiplex)
 {
     asio::io_context ioc;
@@ -379,24 +417,113 @@ BOOST_AUTO_TEST_CASE(comm_same_endpoint_multiplex)
 }
 
 
+BOOST_AUTO_TEST_CASE(comm_send_small_data)
+{
+    asio::io_context ioc;
+
+    sys::error_code ec;
+
+    // Create explicit multiplexer for the client, this allows it to continue
+    // sending FIN packets to the server after the client socket is closed.
+    utp::udp_multiplexer client_m(ioc);
+    client_m.bind({ip::address_v4::loopback(), 0}, ec);
+    BOOST_REQUIRE(!ec);
+
+    utp::socket server_s(ioc);
+    utp::socket client_s(ioc);
+
+    {
+        server_s.bind({ip::address_v4::loopback(), 0}, ec);
+        BOOST_REQUIRE(!ec);
+
+        client_s.bind(client_m, ec);
+        BOOST_REQUIRE(!ec);
+    }
+
+    auto server_ep = server_s.local_endpoint();
+
+    srand(time(nullptr));
+
+    std::vector<uint8_t> data(1);
+
+    for (size_t i = 0; i < data.size(); ++i) {
+        data[i] = uint8_t(i % 256);
+    }
+
+    asio::spawn(ioc, [&](asio::yield_context yield) {
+        sys::error_code ec;
+
+        server_s.async_accept(yield[ec]);
+        BOOST_REQUIRE(!ec);
+
+        string rx_msg(256, '\0');
+
+        size_t d = 0;
+        while (true) {
+            size_t n = server_s.async_read_some(buffer(rx_msg), yield[ec]);
+            for (size_t i = 0; i < n; ++i) {
+                BOOST_REQUIRE_EQUAL(uint8_t(rx_msg[i]), uint8_t(d++ % 256));
+            }
+            BOOST_REQUIRE_EQUAL(ec, sys::error_code());
+            if (d == data.size()) break;
+        }
+
+        server_s.async_read_some(buffer(rx_msg), yield[ec]);
+        BOOST_REQUIRE_EQUAL(ec, asio::error::connection_reset);
+        //server_s.close();
+    }, asio::detached);
+
+    asio::spawn(ioc, [&](asio::yield_context yield) {
+        sys::error_code ec;
+
+        client_s.async_connect(server_ep, yield[ec]);
+        BOOST_REQUIRE(!ec);
+
+        asio::const_buffer buf(data.data(), data.size());
+
+        size_t sent = 0;
+        while (sent != data.size()) {
+            size_t k = std::min<size_t>(data.size() - sent, 333);
+
+            size_t n = client_s.async_write_some
+                ( asio::buffer(data.data() + sent, k)
+                , yield[ec]);
+
+            BOOST_REQUIRE(!ec);
+            sent += n;
+        }
+
+        client_s.close();
+    }, asio::detached);
+
+    ioc.run();
+}
+
+
+
+
 // TODO: This test works but takes long time for the sockets to stop after
 // successfully doing the large data send/receive.
 BOOST_AUTO_TEST_CASE(comm_send_large_data)
 {
     asio::io_context ioc;
 
+    sys::error_code ec;
+
+    // Create explicit multiplexer for the client, this allows it to continue
+    // sending FIN packets to the server after the client socket is closed.
+    utp::udp_multiplexer client_m(ioc);
+    client_m.bind({ip::address_v4::loopback(), 0}, ec);
+    BOOST_REQUIRE(!ec);
+
     utp::socket server_s(ioc);
     utp::socket client_s(ioc);
 
-    {
-        sys::error_code ec1, ec2;
+    server_s.bind({ip::address_v4::loopback(), 0}, ec);
+    BOOST_REQUIRE(!ec);
 
-        server_s.bind({ip::address_v4::loopback(), 0}, ec1);
-        BOOST_REQUIRE(!ec1);
-
-        client_s.bind({ip::address_v4::loopback(), 0}, ec2);
-        BOOST_REQUIRE(!ec2);
-    }
+    client_s.bind(client_m, ec);
+    BOOST_REQUIRE(!ec);
 
     auto server_ep = server_s.local_endpoint();
 
