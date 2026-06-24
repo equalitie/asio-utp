@@ -1,6 +1,8 @@
 #include <asio_utp/socket.hpp>
+#include <asio_utp/udp_multiplexer.hpp>
 #include "namespaces.hpp"
 #include "socket_impl.hpp"
+#include "service.hpp"
 
 using namespace std;
 using namespace asio_utp;
@@ -8,10 +10,12 @@ using AsioExecutor = asio_utp::AsioExecutor;
 
 socket::socket(boost::asio::io_context& ioc)
     : _ex(ioc.get_executor())
+    , _service(asio::use_service<service>(ioc))
 {}
 
-socket::socket(AsioExecutor  ex)
+socket::socket(AsioExecutor ex)
     : _ex(std::move(ex))
+    , _service(asio::use_service<service>(_ex.context()))
 {}
 
 void socket::bind(const endpoint_type& ep, sys::error_code& ec)
@@ -22,10 +26,13 @@ void socket::bind(const endpoint_type& ep, sys::error_code& ec)
         return;
     }
 
-    auto impl = make_shared<socket_impl>(this);
-    impl->bind(ep, ec);
+    auto multiplexer = _service.maybe_create_udp_multiplexer(_ex, ep, ec);
     if (ec) return;
-    _socket_impl = move(impl);
+
+    _multiplexer = std::move(multiplexer);
+    auto& ctx = _multiplexer->get_context();
+    _socket_impl = std::shared_ptr<socket_impl>(new socket_impl(this, ctx.shared_from_this()));
+    ctx.register_socket(_socket_impl);
 }
 
 void socket::bind(const udp_multiplexer& m, sys::error_code& ec)
@@ -36,12 +43,15 @@ void socket::bind(const udp_multiplexer& m, sys::error_code& ec)
         return;
     }
 
-    _socket_impl = make_shared<socket_impl>(this);
-    _socket_impl->bind(m);
+    _multiplexer = m.impl();
+    auto& ctx = _multiplexer->get_context();
+    _socket_impl = std::shared_ptr<socket_impl>(new socket_impl(this, ctx.shared_from_this()));
+    ctx.register_socket(_socket_impl);
 }
 
 socket::socket(socket&& other)
     : _ex(move(other._ex))
+    , _service(other._service)
     , _socket_impl(move(other._socket_impl))
 {
     if (_socket_impl) {
@@ -82,15 +92,19 @@ bool socket::is_open() const {
 
 void socket::close()
 {
-    if (!is_open()) return;
+    if (!_socket_impl) return;
 
-    _socket_impl->close();
+    if (_socket_impl->is_open()) {
+        _socket_impl->close();
+    }
+
     _socket_impl = nullptr;
+    _multiplexer = nullptr;
 }
 
 socket::~socket()
 {
-    if (is_open()) _socket_impl->close();
+    close();
 }
 
 void socket::do_connect(const endpoint_type& ep_, handler<>&& h)

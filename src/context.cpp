@@ -12,12 +12,14 @@ using namespace asio_utp;
 struct context::ticker_type : public enable_shared_from_this<ticker_type> {
     bool _running = false;
     bool _outstanding = false;
+    std::weak_ptr<udp_multiplexer_impl> _multiplexer;
     asio::steady_timer _timer;
     function<void()> _on_tick;
     MultiplexerId _id;
 
-    ticker_type(AsioExecutor ex, function<void()> on_tick)
-        : _timer(move(ex))
+    ticker_type(const std::shared_ptr<udp_multiplexer_impl>& m, function<void()> on_tick)
+        : _multiplexer(m)
+        , _timer(m->get_executor())
         , _on_tick(move(on_tick))
         , _id(m->id())
     {
@@ -32,6 +34,9 @@ struct context::ticker_type : public enable_shared_from_this<ticker_type> {
         _timer.async_wait([this, self = shared_from_this()]
                           (const sys::error_code& ec) {
                               _outstanding = false;
+                              if (!_multiplexer.lock()) {
+                                _running = false;
+                              }
                               if (!_running) return;
                               _on_tick();
                               if (!_running) return;
@@ -63,11 +68,14 @@ uint64 context::callback_sendto(utp_callback_arguments* a)
 
     sys::error_code ec;
 
+    auto m = self->_multiplexer.lock();
+    if (!m) return 0;
+
     std::vector<asio::const_buffer> bufs { asio::buffer(a->buf, a->len) };
-    self->_multiplexer->send_to( bufs
-                               , util::to_endpoint(*a->address)
-                               , 0
-                               , ec);
+    m->send_to( bufs
+              , util::to_endpoint(*a->address)
+              , 0
+              , ec);
 
     // The libutp library sometimes calls this function even after the last
     // socket holding this context has received an EOF and closed.
@@ -78,7 +86,7 @@ uint64 context::callback_sendto(utp_callback_arguments* a)
 
     if (ec && ec != asio::error::would_block) {
         for (auto& s : self->_registered_sockets) {
-            s.close_with_error(ec);
+            s->close_with_error(ec);
         }
     }
 
@@ -179,8 +187,9 @@ uint64 context::callback_on_accept(utp_callback_arguments* a)
 }
 
 context::context(shared_ptr<udp_multiplexer_impl> m)
-    : _multiplexer(std::move(m))
-    , _local_endpoint(_multiplexer->local_endpoint())
+    : _exec(m->get_executor())
+    , _local_endpoint(m->local_endpoint())
+    , _multiplexer(m)
     , _utp_ctx(utp_init(2 /* version */))
     , _id(m->id())
 {
@@ -198,7 +207,7 @@ context::context(shared_ptr<udp_multiplexer_impl> m)
         return on_read(ec, ep, data, size);
     };
 
-    _ticker = make_shared<ticker_type>(get_executor(), [this] {
+    _ticker = make_shared<ticker_type>(m, [this] {
             assert(_utp_ctx);
             if (!_utp_ctx) return;
             if (_debug) {
@@ -224,17 +233,9 @@ context::context(shared_ptr<udp_multiplexer_impl> m)
     utp_set_callback(_utp_ctx, UTP_ON_ACCEPT,       &callback_on_accept);
 }
 
-void context::register_socket(socket_impl& s) {
-    assert(!s._register_hook.is_linked());
+void context::register_socket(std::shared_ptr<socket_impl> s) {
     bool was_empty = _registered_sockets.empty();
-    _registered_sockets.push_back(s);
-    if (was_empty) start();
-}
-
-void context::unregister_socket(socket_impl& s) {
-    assert(s._register_hook.is_linked());
-    s._register_hook.unlink();
-    if (_registered_sockets.empty()) stop();
+    _registered_sockets.push_back(std::move(s));
 }
 
 void context::start_receiving()
@@ -243,29 +244,23 @@ void context::start_receiving()
         log(_id, " context start_receiving");
     }
 
+    auto m = _multiplexer.lock();
+    if (!m) return;
+
     assert(_recv_handle.handler);
     _ticker->start();
 
     if (!_recv_handle.hook.is_linked())
-        _multiplexer->register_recv_handler(_recv_handle);
+        m->register_recv_handler(_recv_handle);
 }
 
-void context::start()
+void context::stop_receiving()
 {
-    if (_debug) {
-        log(_id, " context start");
-    }
-}
-
-void context::stop()
-{
-    if (_debug) {
-        log(_id, " context stop");
-    }
-
     _ticker->stop();
+    _recv_handle.unlink();
 }
 
+// TODO: What's up with `read_ec` not being used?
 void context::on_read( const sys::error_code& read_ec
                      , const endpoint_type& ep
                      , const uint8_t* data
@@ -278,11 +273,12 @@ void context::on_read( const sys::error_code& read_ec
 
     sys::error_code ec;
 
-    if (!_multiplexer->available(ec)) {
+    auto m = _multiplexer.lock();
+    if (!m) return;
+
+    if (!m->available(ec)) {
         utp_issue_deferred_acks(_utp_ctx);
     }
-
-    if (read_ec) return;
 
     sockaddr_storage src_addr = util::to_sockaddr(ep);
 
@@ -295,7 +291,7 @@ void context::on_read( const sys::error_code& read_ec
                    , (sockaddr*) &src_addr
                    , util::sockaddr_size(src_addr));
 
-    if (!_multiplexer->available(ec)) {
+    if (!m->available(ec)) {
         utp_issue_deferred_acks(_utp_ctx);
     }
 
@@ -304,8 +300,20 @@ void context::on_read( const sys::error_code& read_ec
 
 context::executor_type context::get_executor()
 {
-    assert(_multiplexer && "TODO");
-    return _multiplexer->get_executor();
+    return _exec;
+}
+
+void context::close() {
+    if (_debug) {
+        log(_id, " context::close");
+    }
+
+    if (_utp_ctx) {
+        utp_destroy(_utp_ctx);
+        _utp_ctx = nullptr;
+    }
+
+    stop_receiving();
 }
 
 context::~context()
@@ -314,10 +322,7 @@ context::~context()
         log(_id, " ~context");
     }
 
-    utp_destroy(_utp_ctx);
-
-    auto& s = asio::use_service<service>(_multiplexer->get_executor().context());
-    s.erase_context(_local_endpoint);
+    close();
 }
 
 void context::increment_outstanding_ops(const char* dbg)
@@ -342,7 +347,7 @@ void context::decrement_outstanding_ops(const char* dbg)
     }
 
     if (--_outstanding_op_count == 0 && _completed_op_count == 0) {
-        _ticker->stop();
+        stop_receiving();
     }
 }
 
@@ -366,6 +371,6 @@ void context::decrement_completed_ops(const char* dbg)
     }
 
     if (--_completed_op_count == 0 && _outstanding_op_count == 0) {
-        _ticker->stop();
+        stop_receiving();
     }
 }

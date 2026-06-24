@@ -6,8 +6,10 @@
 
 namespace asio_utp {
 
+class service;
 class socket_impl;
 class udp_multiplexer;
+class udp_multiplexer_impl;
 
 class socket {
 public:
@@ -16,8 +18,6 @@ public:
     using AsioExecutor = asio_utp::AsioExecutor;
 
 public:
-    socket() = default;
-
     socket(const socket&) = delete;
     socket& operator=(const socket&) = delete;
 
@@ -75,7 +75,12 @@ private:
 private:
     friend class socket_impl;
     AsioExecutor _ex;
+    service& _service;
+    // `_socket_impl` is shared with the `context`.
     std::shared_ptr<socket_impl> _socket_impl;
+    // `_multiplexer` may be shared with multiple other `socket`s or with
+    // `udp_multiplexer`s.
+    std::shared_ptr<udp_multiplexer_impl> _multiplexer;
 };
 
 template<typename CompletionToken>

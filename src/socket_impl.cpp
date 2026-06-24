@@ -1,6 +1,5 @@
 #include <asio_utp/socket.hpp>
 #include <asio_utp/log.hpp>
-#include <asio_utp/udp_multiplexer.hpp>
 #include "service.hpp"
 #include "context.hpp"
 #include "util.hpp"
@@ -11,44 +10,17 @@
 using namespace std;
 using namespace asio_utp;
 
-socket_impl::socket_impl(socket* owner)
+socket_impl::socket_impl(socket* owner, std::shared_ptr<context> ctx)
     : _ex(owner->get_executor())
-    , _service(asio::use_service<service>(_ex.context()))
     , _owner(owner)
-    , _id(_context.id().generate_socket_id())
+    , _context(std::move(ctx))
+    , _id(_context->id().generate_socket_id())
 {
     if (_debug) {
         log(_id, " socket_impl::socket_impl()");
     }
 }
 
-
-void socket_impl::bind(const endpoint_type& ep, sys::error_code& ec)
-{
-    assert(!_context);
-    auto ctx = _service.maybe_create_context(_ex, ep, ec);
-
-    if (_debug) {
-        log(this, " socket_impl::bind() _context:", _context);
-    }
-
-    if (ec) return;
-
-    _context = move(ctx);
-    _context->register_socket(*this);
-}
-
-void socket_impl::bind(const udp_multiplexer& m)
-{
-    assert(!_context);
-    _context = _service.maybe_create_context(m.impl());
-
-    if (_debug) {
-        log(this, " socket_impl::bind() _context:", _context);
-    }
-
-    _context->register_socket(*this);
-}
 
 void socket_impl::on_connect()
 {
@@ -258,9 +230,8 @@ void socket_impl::do_accept(handler<> h)
     }
 
     // TODO: Which error code to call `h` with?
-    assert(_context);
     assert(!_accept_handler);
-    _context->_accepting_sockets.push_back(*this);
+    _context->add_accepting_socket(*this);
 
     setup_op(_accept_handler, move(h), "accept");
 }
@@ -268,7 +239,6 @@ void socket_impl::do_accept(handler<> h)
 
 asio::ip::udp::endpoint socket_impl::local_endpoint() const
 {
-    assert(_context);
     return _context->local_endpoint();
 }
 
@@ -324,16 +294,7 @@ void socket_impl::on_destroy()
 
     close_with_error(asio::error::connection_aborted);
 
-    if (_self) {
-        _context->decrement_outstanding_ops("close");
-    }
-
-    // This function is called from inside libutp. We must make sure that
-    // neither _utp_socket, nor the _context get destroyed before that function
-    // finishes. On the other hand we do want to schedule destruction of `this`
-    // some time after that.
-    asio::post(get_executor(),
-               [&, s = shared_from_this()] { _self = nullptr; });
+    _context->decrement_outstanding_ops("close");
 }
 
 
@@ -379,7 +340,6 @@ void socket_impl::close_with_error(const sys::error_code& ec)
     if (s && !_got_eof) {
         // Note: Calling utp_close may trigger a call to this function again.
         utp_close(s);
-        _self = shared_from_this();
         if (_owner) {
             _owner->_socket_impl = nullptr;
             _owner = nullptr;
@@ -400,10 +360,6 @@ socket_impl::~socket_impl()
     }
 
     close_with_error(asio::error::connection_aborted);
-
-    if (_context) {
-        _context->unregister_socket(*this);
-    }
 }
 
 
