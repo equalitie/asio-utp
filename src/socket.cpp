@@ -50,9 +50,9 @@ void socket::bind(const udp_multiplexer& m, sys::error_code& ec)
 }
 
 socket::socket(socket&& other)
-    : _ex(move(other._ex))
+    : _ex(std::move(other._ex))
     , _service(other._service)
-    , _socket_impl(move(other._socket_impl))
+    , _socket_impl(std::move(other._socket_impl))
 {
     if (_socket_impl) {
         _socket_impl->_owner = this;
@@ -63,8 +63,8 @@ asio_utp::socket& socket::operator=(socket&& other)
 {
     assert(!_ex || !other._ex || _ex == other._ex);
 
-    _ex = move(other._ex);
-    _socket_impl = move(other._socket_impl);
+    _ex = std::move(other._ex);
+    _socket_impl = std::move(other._socket_impl);
 
     if (_socket_impl) {
         assert(other._socket_impl->_owner);
@@ -126,7 +126,7 @@ void socket::do_connect(const endpoint_type& ep_, handler<>&& h)
         }
     }
 
-    _socket_impl->do_connect(ep, std::move(move(h)));
+    _socket_impl->do_connect(ep, std::move(h));
 }
 
 void socket::do_accept(handler<>&& h)

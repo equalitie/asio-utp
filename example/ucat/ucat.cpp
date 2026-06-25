@@ -108,7 +108,7 @@ void server( asio::io_context& ioc
     s.async_accept(yield);
     cerr << "Accepted"  << endl;
 
-    full_duplex_forward(move(s), yield);
+    full_duplex_forward(std::move(s), yield);
 }
 
 void client( asio::io_context& ioc
@@ -129,7 +129,7 @@ void client( asio::io_context& ioc
     s.async_connect(remote_ep, yield);
     cerr << "Connected" << endl;
 
-    full_duplex_forward(move(s), yield);
+    full_duplex_forward(std::move(s), yield);
 }
 
 void usage(const char* app_name)

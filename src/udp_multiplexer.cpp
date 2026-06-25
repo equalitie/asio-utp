@@ -58,7 +58,7 @@ void udp_multiplexer::bind( const endpoint_type& local_ep
 
     _state = make_shared<state>();
 
-    _state->impl = move(impl);
+    _state->impl = std::move(impl);
 
     _state->recv_entry.handler
         = std::bind(&state::handle_read, _state, _1, _2, _3, _4);
@@ -96,7 +96,7 @@ void udp_multiplexer::do_send(const endpoint_type& dst, handler<size_t>&& h)
 
     auto& impl = *_state->impl;
 
-    _state->tx_handler = move(h);
+    _state->tx_handler = std::move(h);
 
     impl.async_send_to(_state->tx_buffers, dst,
         [s = _state] (const sys::error_code& ec, size_t size) mutable {
@@ -115,7 +115,7 @@ void udp_multiplexer::do_receive(endpoint_type& ep, handler<size_t>&& h)
             "allowed at a time");
 
     _state->rx_ep = &ep;
-    _state->rx_handler = move(h);
+    _state->rx_handler = std::move(h);
     _state->impl->register_recv_handler(_state->recv_entry);
 }
 

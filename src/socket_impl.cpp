@@ -46,7 +46,7 @@ void socket_impl::on_receive(const unsigned char* buf, size_t size)
         return;
     }
 
-    assert(_rx_buffer_queue.empty()); 
+    assert(_rx_buffer_queue.empty());
 
     const_buffer src(buf, size);
 
@@ -95,7 +95,7 @@ template<class Handler>
 void socket_impl::setup_op(Handler& target, Handler&& h, const char* dbg)
 {
     _context->increment_outstanding_ops(dbg);
-    target = move(h);
+    target = std::move(h);
     target.exec_after([ctx = _context, dbg] { ctx->decrement_outstanding_ops(dbg); });
 }
 
@@ -123,7 +123,7 @@ void socket_impl::do_write(handler<size_t> h)
         return h.post(asio::error::bad_descriptor, 0);
     }
 
-    setup_op(_send_handler, move(h), "write");
+    setup_op(_send_handler, std::move(h), "write");
 
     bool still_writable = true;
 
@@ -163,7 +163,7 @@ void socket_impl::on_writable()
     }
 
     if (!_send_handler) return;
-    do_write(move(_send_handler));
+    do_write(std::move(_send_handler));
 }
 
 void socket_impl::do_read(handler<size_t> h)
@@ -186,7 +186,7 @@ void socket_impl::do_read(handler<size_t> h)
         return h.post(sys::error_code(), 0);
     }
 
-    setup_op(_recv_handler, move(h), "read");
+    setup_op(_recv_handler, std::move(h), "read");
 
     // If we haven't yet received anything, we wait. But note that if we did,
     // but the _rx_buffers is empty, then we still post the callback with zero
@@ -229,7 +229,7 @@ void socket_impl::do_accept(handler<> h)
     assert(!_accept_handler);
     _context->add_accepting_socket(*this);
 
-    setup_op(_accept_handler, move(h), "accept");
+    setup_op(_accept_handler, std::move(h), "accept");
 }
 
 
@@ -372,7 +372,7 @@ void socket_impl::do_connect(const endpoint_type& ep, handler<> h)
 
     assert(!_utp_socket);
 
-    setup_op(_connect_handler, move(h), "connect");
+    setup_op(_connect_handler, std::move(h), "connect");
 
     sockaddr_storage addr = util::to_sockaddr(ep);
 

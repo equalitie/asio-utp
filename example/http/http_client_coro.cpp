@@ -13,6 +13,7 @@
 //
 //------------------------------------------------------------------------------
 
+#include <boost/asio/detached.hpp>
 #include <boost/range.hpp>
 #include <boost/asio/error.hpp>
 #include <boost/beast/core.hpp>
@@ -127,14 +128,19 @@ int main(int argc, char** argv)
     net::io_context ioc;
 
     // Launch the asynchronous operation
-    net::spawn(ioc, std::bind(
-        &do_session,
-        udp::endpoint{net::ip::make_address(ip), port},
-        std::string(host),
-        std::string(target),
-        version,
-        std::ref(ioc),
-        std::placeholders::_1));
+    net::spawn(
+        ioc,
+        std::bind(
+            &do_session,
+            udp::endpoint{net::ip::make_address(ip), port},
+            std::string(host),
+            std::string(target),
+            version,
+            std::ref(ioc),
+            std::placeholders::_1
+        ),
+        net::detached
+    );
 
     // Run the I/O service. The call will return when
     // the get operation is complete.
