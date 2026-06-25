@@ -3,6 +3,7 @@
 #include <boost/asio/ip/udp.hpp>
 #include <asio_utp/detail/handler.hpp>
 #include <asio_utp/detail/signal.hpp>
+#include <asio_utp/udp_socket.hpp>
 
 namespace asio_utp {
 
@@ -40,6 +41,7 @@ public:
 
     void bind(const endpoint_type& local_endpoint, boost::system::error_code&);
     void bind(const udp_multiplexer&);
+    void bind(std::unique_ptr<abstract_udp_socket>);
 
     template< typename MutableBufferSequence
             , typename CompletionToken>

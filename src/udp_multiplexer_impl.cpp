@@ -1,8 +1,9 @@
+#include "asio_utp/udp_socket.hpp"
 #include "service.hpp"
 
 namespace asio_utp {
 
-std::shared_ptr<udp_multiplexer_impl> udp_multiplexer_impl::create(asio::ip::udp::socket s)
+std::shared_ptr<udp_multiplexer_impl> udp_multiplexer_impl::create(std::unique_ptr<abstract_udp_socket> s)
 {
     auto m = std::make_shared<udp_multiplexer_impl>(std::move(s));
     auto ctx = std::make_shared<::asio_utp::context>(m);
@@ -10,16 +11,12 @@ std::shared_ptr<udp_multiplexer_impl> udp_multiplexer_impl::create(asio::ip::udp
     return m;
 }
 
-udp_multiplexer_impl::udp_multiplexer_impl(asio::ip::udp::socket s)
+udp_multiplexer_impl::udp_multiplexer_impl(std::unique_ptr<abstract_udp_socket> s)
     : _udp_socket(std::move(s))
     , _state(std::make_shared<State>())
 {
     if (_debug) {
-        log(this, " udp_multiplexer_impl(", _udp_socket.local_endpoint(), ")");
-    }
-
-    if (!_udp_socket.non_blocking()) {
-        _udp_socket.non_blocking(true);
+        log(this, " udp_multiplexer_impl(", _udp_socket->local_endpoint(), ")");
     }
 }
 
@@ -50,9 +47,9 @@ void udp_multiplexer_impl::on_recv_entry_unlinked()
         // such that it doesn't block io_context.run or have another
         // socket (or perhaps the same one?) send this socket a
         // message to release from async_receive_from.
-        if (_udp_socket.is_open()) {
+        if (_udp_socket->is_open()) {
             sys::error_code ec;
-            _udp_socket.cancel(ec);
+            _udp_socket->cancel(ec);
             assert(!ec);
         }
     }
@@ -69,32 +66,34 @@ void udp_multiplexer_impl::start_receiving()
         log(_id, " udp_multiplexer_impl::start_receiving");
     }
 
-    _udp_socket.async_receive_from
-        ( asio::buffer(_state->rx_buffer)
-        , _state->rx_endpoint
-        , [&, wself, s = _state] (const sys::error_code& ec, size_t size)
-          {
-              if (_debug) {
-                  log(_id, " udp_multiplexer_impl::start_receiving on receive ", ec.message());
-              }
+    auto buffer = asio::buffer(_state->rx_buffer);
 
-              if (auto self = wself.lock()) {
-                  assert(_is_receiving);
+    _udp_socket->async_receive_from(
+        std::span(&buffer, 1),
+        _state->rx_endpoint,
+        [&, wself, s = _state] (const sys::error_code& ec, size_t size) {
+            if (_debug) {
+                log(_id, " udp_multiplexer_impl::start_receiving on receive ", ec.message());
+            }
 
-                  bool canceled = ec == asio::error::operation_aborted
-                               && _udp_socket.is_open();
+            if (auto self = wself.lock()) {
+                assert(_is_receiving);
 
-                  if (!canceled) {
-                      flush_handlers(ec, size);
-                  }
+                bool canceled = ec == asio::error::operation_aborted
+                    && _udp_socket->is_open();
 
-                  _is_receiving = false;
+                if (!canceled) {
+                    flush_handlers(ec, size);
+                }
 
-                  if (!_recv_handlers.empty()) {
-                      start_receiving();
-                  }
-              }
-          });
+                _is_receiving = false;
+
+                if (!_recv_handlers.empty()) {
+                    start_receiving();
+                }
+            }
+        }
+    );
 }
 
 void udp_multiplexer_impl::flush_handlers(const sys::error_code& ec, size_t size)
@@ -131,7 +130,7 @@ std::size_t udp_multiplexer_impl::send_to( const std::vector<asio::const_buffer>
         }
     }
 
-    size_t sent = _udp_socket.send_to(buffers, destination, flags, ec);
+    size_t sent = _udp_socket->immediate_send_to(buffers, destination, flags, ec);
 
     _send_to_signal(buffers, sent, destination, ec);
 
@@ -145,7 +144,7 @@ udp_multiplexer_impl::on_send_to_connection udp_multiplexer_impl::on_send_to(std
 
 size_t udp_multiplexer_impl::available(sys::error_code& ec) const
 {
-    return _udp_socket.available(ec);
+    return _udp_socket->available(ec);
 }
 
 udp_multiplexer_impl::~udp_multiplexer_impl() {
@@ -153,7 +152,7 @@ udp_multiplexer_impl::~udp_multiplexer_impl() {
         log(_id, " ~udp_multiplexer_impl");
     }
 
-    auto& s = asio::use_service<service>(_udp_socket.get_executor().context());
+    auto& s = asio::use_service<service>(_udp_socket->get_executor().context());
     s.erase_multiplexer(local_endpoint());
     _context->close();
 }

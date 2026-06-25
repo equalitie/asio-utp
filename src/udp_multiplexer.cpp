@@ -1,4 +1,5 @@
 #include <asio_utp/udp_multiplexer.hpp>
+#include "asio_utp/udp_socket.hpp"
 #include "udp_multiplexer_impl.hpp"
 #include "service.hpp"
 #include "context.hpp"
@@ -80,6 +81,18 @@ void udp_multiplexer::bind( const udp_multiplexer& other)
 
     _state->recv_entry.handler
         = std::bind(&state::handle_read, _state, _1, _2, _3, _4);
+}
+
+void udp_multiplexer::bind(std::unique_ptr<abstract_udp_socket> socket) {
+    using namespace std::placeholders;
+
+    assert(!_state); // TODO: return error on rebind?
+    sys::error_code ec_ignored;
+    if (_state) close(ec_ignored);
+
+    _state = make_shared<state>();
+    _state->impl = make_shared<udp_multiplexer_impl>(std::move(socket));
+    _state->recv_entry.handler = std::bind(&state::handle_read, _state, _1, _2, _3, _4);
 }
 
 shared_ptr<udp_multiplexer_impl> udp_multiplexer::impl() const
