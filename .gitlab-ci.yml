@@ -41,19 +41,12 @@ stages:
     - export LD_LIBRARY_PATH=$CI_PROJECT_DIR/$boost/stage/lib:$LD_LIBRARY_PATH
 
     # Run the tests
-    - ./build/asio-utp/test-comm
-    - ./build/asio-utp/test-util
+    - ./build/asio-utp/asio_utp_test_comm
+    - ./build/asio-utp/asio_utp_test_util
 
     # Run the benchmark
-    - ./build/asio-utp/test-bench server utp 127.0.0.1:6789&
-    - ./build/asio-utp/test-bench client utp 127.0.0.1:6789
-
-boost-1.79:
-  extends: ".build"
-  variables:
-    BOOST_MAJOR: "1"
-    BOOST_MINOR: "79"
-    BOOST_PATCH: "0"
+    - ./build/asio-utp/asio_utp_test_bench server utp 127.0.0.1:6789&
+    - ./build/asio-utp/asio_utp_test_bench client utp 127.0.0.1:6789
 
 boost-1.87:
   extends: ".build"
