@@ -234,7 +234,6 @@ context::context(shared_ptr<udp_multiplexer_impl> m)
 }
 
 void context::register_socket(std::shared_ptr<socket_impl> s) {
-    bool was_empty = _registered_sockets.empty();
     _registered_sockets.push_back(std::move(s));
 }
 
