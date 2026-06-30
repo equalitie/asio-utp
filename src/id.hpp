@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <ostream>
 #include <cstdint>
 
@@ -30,7 +31,7 @@ public:
     MultiplexerId(const MultiplexerId&) = default;
 
     SocketId generate_socket_id() {
-        return SocketId(_next_socket_id++, _value);
+        return SocketId((*_next_socket_id)++, _value);
     }
 
     friend std::ostream& operator<<(std::ostream& os, const MultiplexerId& self) {
@@ -39,7 +40,7 @@ public:
 
 private:
     uint32_t _value;
-    uint32_t _next_socket_id = 0;
+    std::shared_ptr<uint32_t> _next_socket_id = std::make_shared<uint32_t>(0);
 };
 
 } // namespace

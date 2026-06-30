@@ -71,6 +71,8 @@ private:
     template<class Handler, class... Args>
     void dispatch_op(Handler&, const char* dbg, const sys::error_code&, Args...);
 
+    SocketId id() const { return _id; }
+
 private:
     AsioExecutor _ex;
 
