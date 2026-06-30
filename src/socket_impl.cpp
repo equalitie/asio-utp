@@ -290,7 +290,10 @@ void socket_impl::on_destroy()
 
     close_with_error(asio::error::connection_aborted);
 
-    _context->decrement_outstanding_ops("close");
+    if (_decrement_close) {
+        _context->decrement_outstanding_ops("close");
+        _decrement_close = false;
+    }
 }
 
 
@@ -340,7 +343,9 @@ void socket_impl::close_with_error(const sys::error_code& ec)
             _owner->_socket_impl = nullptr;
             _owner = nullptr;
         }
+        assert(!_decrement_close);
         _context->increment_outstanding_ops("close");
+        _decrement_close = true;
     }
 }
 

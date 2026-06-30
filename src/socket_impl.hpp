@@ -109,6 +109,7 @@ private:
     std::vector<buf_t> _rx_buffer_queue;
     std::vector<boost::asio::mutable_buffer> _rx_buffers;
     SocketId _id;
+    bool _decrement_close = false;
 
 #if ASIO_UTP_DEBUG_LOGGING
     bool _debug = true;
