@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/asio/buffer.hpp>
 #include <boost/asio/ip/udp.hpp>
 #include "namespaces.hpp"
 #include "weak_from_this.hpp"
@@ -9,6 +10,7 @@
 #include <asio_utp/detail/signal.hpp>
 #include <asio_utp/udp_socket.hpp>
 #include <boost/system/system_error.hpp>
+#include <cstdint>
 #include <iostream>
 #include <sstream>
 
@@ -100,10 +102,21 @@ public:
 
 private:
     struct State {
-        endpoint_type rx_endpoint;
-        std::vector<uint8_t> rx_buffer;
+        constexpr static size_t rx_buffer_size = 65537;
 
-        State() : rx_buffer(65537) {}
+        endpoint_type rx_endpoint;
+        asio::mutable_buffer rx_buffer;
+
+        State() :
+            // NOTE: because `asio::mutable_buffer` doesn't own the data and to avoid having to keep
+            // the data in a separate vector, we explicitly allocate it here and then deallocate it
+            // in the destructor.
+            rx_buffer(new uint8_t[rx_buffer_size], rx_buffer_size)
+        {}
+
+        ~State() {
+            delete static_cast<uint8_t*>(rx_buffer.data());
+        }
     };
 
     std::unique_ptr<abstract_udp_socket> _udp_socket;

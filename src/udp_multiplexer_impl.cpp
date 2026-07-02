@@ -66,10 +66,8 @@ void udp_multiplexer_impl::start_receiving()
         log(_id, " udp_multiplexer_impl::start_receiving");
     }
 
-    auto buffer = asio::buffer(_state->rx_buffer);
-
     _udp_socket->async_receive_from(
-        std::span(&buffer, 1),
+        std::span(&_state->rx_buffer, 1),
         _state->rx_endpoint,
         [&, wself, s = _state] (const sys::error_code& ec, size_t size) {
             if (_debug) {
@@ -102,7 +100,7 @@ void udp_multiplexer_impl::flush_handlers(const sys::error_code& ec, size_t size
         log(_id, " udp_multiplexer::flush_handlers "
             "ec:", ec.message(), " size:", size, " from:", _state->rx_endpoint);
         if (!ec) {
-            log(_id, "    ", to_hex((uint8_t*)_state->rx_buffer.data(), size));
+            log(_id, "    ", to_hex((uint8_t*) _state->rx_buffer.data(), size));
         }
     }
 
@@ -114,7 +112,13 @@ void udp_multiplexer_impl::flush_handlers(const sys::error_code& ec, size_t size
         auto e = recv_handlers.front();
         recv_handlers.pop_front();
         assert(e.handler);
-        e.handler(ec, _state->rx_endpoint, _state->rx_buffer.data(), size);
+
+        e.handler(
+            ec,
+            _state->rx_endpoint,
+            static_cast<const uint8_t*>(_state->rx_buffer.data()),
+            size
+        );
     }
 }
 
