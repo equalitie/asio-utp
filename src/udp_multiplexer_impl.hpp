@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/asio/buffer.hpp>
 #include <boost/asio/ip/udp.hpp>
 #include "namespaces.hpp"
 #include "weak_from_this.hpp"
@@ -7,6 +8,9 @@
 #include "id.hpp"
 #include <asio_utp/log.hpp>
 #include <asio_utp/detail/signal.hpp>
+#include <asio_utp/udp_socket.hpp>
+#include <boost/system/system_error.hpp>
+#include <cstdint>
 #include <iostream>
 #include <sstream>
 
@@ -47,7 +51,7 @@ private:
     using recv_handlers = intrusive::list<recv_entry, &recv_entry::hook>;
 
 public:
-    static std::shared_ptr<udp_multiplexer_impl> create(asio::ip::udp::socket);
+    static std::shared_ptr<udp_multiplexer_impl> create(std::unique_ptr<abstract_udp_socket>);
 
     std::size_t send_to( const std::vector<asio::const_buffer>&
                        , const endpoint_type& destination
@@ -64,14 +68,14 @@ public:
     on_send_to_connection on_send_to(std::function<on_send_to_handler> handler);
 
     endpoint_type local_endpoint() const {
-        return _udp_socket.local_endpoint();
+        return _udp_socket->local_endpoint();
     }
 
     asio::any_io_executor get_executor() {
-        return _udp_socket.get_executor();
+        return _udp_socket->get_executor();
     }
 
-    bool is_open() const { return _udp_socket.is_open(); }
+    bool is_open() const { return _udp_socket->is_open(); }
 
     size_t available(sys::error_code&) const;
 
@@ -79,7 +83,7 @@ public:
 
     context& get_context() { return *_context; }
 
-    udp_multiplexer_impl(asio::ip::udp::socket);
+    udp_multiplexer_impl(std::unique_ptr<abstract_udp_socket>);
 
     MultiplexerId id() const {
         return _id;
@@ -98,13 +102,24 @@ public:
 
 private:
     struct State {
-        endpoint_type rx_endpoint;
-        std::vector<uint8_t> rx_buffer;
+        constexpr static size_t rx_buffer_size = 65537;
 
-        State() : rx_buffer(65537) {}
+        endpoint_type rx_endpoint;
+        asio::mutable_buffer rx_buffer;
+
+        State() :
+            // NOTE: because `asio::mutable_buffer` doesn't own the data and to avoid having to keep
+            // the data in a separate vector, we explicitly allocate it here and then deallocate it
+            // in the destructor.
+            rx_buffer(new uint8_t[rx_buffer_size], rx_buffer_size)
+        {}
+
+        ~State() {
+            delete static_cast<uint8_t*>(rx_buffer.data());
+        }
     };
 
-    asio::ip::udp::socket _udp_socket;
+    std::unique_ptr<abstract_udp_socket> _udp_socket;
 
     // Anyone wishing to receive raw UDP packets adds a handler into this
     // intrusive list. Zero or one entry will be from the `context` and zero or
@@ -125,7 +140,7 @@ void udp_multiplexer_impl::async_send_to( const std::vector<asio::const_buffer>&
                                         , const endpoint_type& dst
                                         , WriteHandler&& h)
 {
-    _udp_socket.async_send_to(buffers, dst, [
+    _udp_socket->async_send_to(buffers, dst, [
         &buffers,
         &dst,
         h = std::forward<WriteHandler>(h),

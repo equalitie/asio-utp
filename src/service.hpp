@@ -2,6 +2,7 @@
 
 #include <map>
 #include <boost/asio.hpp>
+#include "asio_utp/udp_socket.hpp"
 #include "namespaces.hpp"
 
 namespace asio_utp {
@@ -65,7 +66,7 @@ service::maybe_create_udp_multiplexer(Executor& ex, const endpoint_type& ep, sys
 
     if (ec) return nullptr;
 
-    auto m = udp_multiplexer_impl::create(std::move(socket));
+    auto m = udp_multiplexer_impl::create(std::make_unique<udp_socket_wrapper>(std::move(socket)));
     _multiplexers[m->local_endpoint()] = m;
 
     return m;

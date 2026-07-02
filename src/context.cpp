@@ -20,8 +20,7 @@ struct context::ticker_type : public enable_shared_from_this<ticker_type> {
     ticker_type(const std::shared_ptr<udp_multiplexer_impl>& m, function<void()> on_tick)
         : _multiplexer(m)
         , _timer(m->get_executor())
-        , _on_tick(move(on_tick))
-        , _id(m->id())
+        , _on_tick(std::move(on_tick))
     {
     }
 
