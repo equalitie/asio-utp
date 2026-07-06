@@ -4,6 +4,7 @@
 #include <asio_utp/detail/handler.hpp>
 #include <asio_utp/detail/signal.hpp>
 #include <asio_utp/udp_socket.hpp>
+#include <type_traits>
 
 namespace asio_utp {
 
@@ -30,8 +31,12 @@ public:
 public:
     udp_multiplexer() = default;
 
-    udp_multiplexer(const udp_multiplexer&) = delete;
-    udp_multiplexer& operator=(const udp_multiplexer&) = delete;
+    udp_multiplexer(const udp_multiplexer&);
+
+    udp_multiplexer& operator=(const udp_multiplexer& other) {
+        *this = udp_multiplexer(other);
+        return *this;
+    }
 
     udp_multiplexer(udp_multiplexer&&) = default;
     udp_multiplexer& operator=(udp_multiplexer&&) = default;
@@ -40,8 +45,10 @@ public:
     udp_multiplexer(const AsioExecutor&);
 
     void bind(const endpoint_type& local_endpoint, boost::system::error_code&);
-    void bind(const udp_multiplexer&);
     void bind(std::unique_ptr<abstract_udp_socket>);
+
+    [[deprecated("use copy constructor or copy assignment operator instead")]]
+    void bind(const udp_multiplexer&);
 
     template< typename MutableBufferSequence
             , typename CompletionToken>

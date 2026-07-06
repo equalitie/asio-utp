@@ -41,6 +41,20 @@ udp_multiplexer::udp_multiplexer(const AsioExecutor& ex)
     : _ex(ex)
 {}
 
+udp_multiplexer::udp_multiplexer(const udp_multiplexer& other) :
+    _ex(other._ex),
+    _state(make_shared<state>())
+{
+    using namespace std::placeholders;
+
+    assert(other._state);
+    assert(other._state->impl);
+
+    _state->impl = other._state->impl;
+    _state->recv_entry.handler
+        = std::bind(&state::handle_read, _state, _1, _2, _3, _4);
+}
+
 void udp_multiplexer::bind( const endpoint_type& local_ep
                           , sys::error_code& ec)
 {
@@ -67,20 +81,10 @@ void udp_multiplexer::bind( const endpoint_type& local_ep
 
 void udp_multiplexer::bind( const udp_multiplexer& other)
 {
-    using namespace std::placeholders;
-
-    assert(other._state);
-    assert(other._state->impl);
-
-    assert(!_state /* TODO: return error or rebind? */);
     sys::error_code ec_ignored;
     if (_state) close(ec_ignored);
 
-    _state = make_shared<state>();
-    _state->impl = other._state->impl;
-
-    _state->recv_entry.handler
-        = std::bind(&state::handle_read, _state, _1, _2, _3, _4);
+    *this = other;
 }
 
 void udp_multiplexer::bind(std::unique_ptr<abstract_udp_socket> socket) {
