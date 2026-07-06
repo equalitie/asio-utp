@@ -1,5 +1,7 @@
 #pragma once
 
+#include <span>
+
 #include <boost/asio/any_completion_handler.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/ip/udp.hpp>
