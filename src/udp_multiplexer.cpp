@@ -95,7 +95,7 @@ void udp_multiplexer::bind(std::unique_ptr<abstract_udp_socket> socket) {
     if (_state) close(ec_ignored);
 
     _state = make_shared<state>();
-    _state->impl = make_shared<udp_multiplexer_impl>(std::move(socket));
+    _state->impl = udp_multiplexer_impl::create(std::move(socket));
     _state->recv_entry.handler = std::bind(&state::handle_read, _state, _1, _2, _3, _4);
 }
 
