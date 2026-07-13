@@ -75,12 +75,16 @@ service::maybe_create_udp_multiplexer(Executor& ex, const endpoint_type& ep, sys
 inline
 void service::erase_multiplexer(endpoint_type ep)
 {
+    auto i = _multiplexers.find(ep);
+    if (i == _multiplexers.end()) {
+        return;
+    }
+
     if (_debug) {
         log("erase_multiplexer ", ep, " ", _multiplexers.size());
     }
 
-    assert(_multiplexers.count(ep));
-    _multiplexers.erase(ep);
+    _multiplexers.erase(i);
 }
 
 inline service::~service()
