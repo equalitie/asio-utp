@@ -25,7 +25,6 @@ public:
     socket& operator=(socket&&);
 
     socket(AsioExecutor);
-    socket(boost::asio::io_context&);
 
     void bind(const endpoint_type&, boost::system::error_code&);
 
