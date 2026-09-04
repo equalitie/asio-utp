@@ -5,7 +5,7 @@ stages:
   tags:
     - docker
   stage: build
-  image: debian:bookworm
+  image: debian:trixie
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
   script:
