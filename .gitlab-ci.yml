@@ -23,15 +23,14 @@ stages:
     - wget --quiet "https://archives.boost.io/release/"$BOOST_VERSION"/source/"$boost".tar.bz2"
     - tar -xjf $boost".tar.bz2"
     - cd $boost
-    - ./bootstrap.sh
+    - ./bootstrap.sh --prefix=/usr/local
     - b2_options="--link=static --with-system --with-test --with-context"
     - if [[ $BOOST_MINOR -lt 80 ]]; then b2_options=$b2_options" --with-coroutine"; fi
-    - ./b2 -j3 -d+0 $b2_options
+    - ./b2 -j3 -d+0 $b2_options install
     - cd ..
 
     # Build asio-utp
     - cmake -S ./ -B build/asio-utp
-      -DBOOST_ROOT=$CI_PROJECT_DIR"/"$boost
       -DBOOST_VERSION=$BOOST_VERSION
       -DASIO_UTP_WITH_TESTS=ON
       -DASIO_UTP_WITH_EXAMPLES=OFF
